@@ -1,6 +1,7 @@
 (() => {
   "use strict";
 
+  const learningVideoId="";
   const COMPANY = { name: "Asteron Industrial Supply", id: "SUP-20481", contact: "Maya Chen", email: "maya.chen@asteron.example", phone: "+1 (555) 014-7782" };
   const CATEGORIES = {
     "Industrial Components": { sampleRequired: true, approvalRequired: true },
@@ -59,16 +60,35 @@
       ]
     }
   ];
-  const learningQuestions=learningLessons.flatMap(lesson=>lesson.questions);
+  const learningQuestions=[
+    {text:"What is the purpose of a sustainable sourcing policy?",options:["To consider relevant environmental, social, and governance risks in purchasing","To guarantee the lowest price for every purchase","To transfer all supplier responsibilities to the buyer","To replace product quality requirements"],answer:0,explanation:"Sustainable sourcing includes relevant environmental, social, and governance considerations alongside commercial requirements."},
+    {text:"What should a supplier do when it cannot yet meet a stated requirement?",options:["Claim compliance without evidence","Explain the gap honestly and agree on practical next steps","Stop responding to the buyer","Create an unverified certificate"],answer:1,explanation:"Transparent communication and a realistic improvement plan support responsible business relationships."},
+    {text:"When should sourcing expectations be communicated to suppliers?",options:["As early and clearly as practical","Only after a problem occurs","Only when an audit is scheduled","After the contract has ended"],answer:0,explanation:"Early communication gives suppliers time to understand requirements and plan implementation."},
+    {text:"Which practice supports safe working conditions?",options:["Keeping hazards confidential","Providing a way to report hazards and addressing them promptly","Discouraging workers from raising concerns","Recording only incidents that cause serious injury"],answer:1,explanation:"Accessible reporting and prompt hazard management help prevent harm."},
+    {text:"Which situation can indicate a forced-labor risk?",options:["Workers receive written employment terms","Workers retain their identity documents","Workers surrender identity documents and cannot freely leave","Workers receive safety training"],answer:2,explanation:"Retaining identity documents or restricting freedom of movement can indicate forced-labor risk."},
+    {text:"What is a sensible first step for managing environmental impacts?",options:["Identify significant impacts such as energy, water, and waste","Claim there is no impact without collecting information","Wait until every impact can be measured perfectly","Stop keeping operational records"],answer:0,explanation:"Identifying significant impacts provides a practical starting point for controls and improvement."},
+    {text:"A buyer requests a personal payment to speed up supplier approval. What should you do?",options:["Pay it and record it as a routine expense","Ask a coworker to pay instead","Refuse and report the request through an appropriate channel","Offer a larger gift instead"],answer:2,explanation:"Improper payments should be refused and reported through an appropriate channel."},
+    {text:"An employee has a close relationship with someone evaluating your bid. What is the best action?",options:["Disclose the potential conflict through the appropriate process","Keep it private unless the bid is awarded","Offer the evaluator a gift","Withdraw all company records"],answer:0,explanation:"Disclosure allows the organization to assess and manage a potential conflict transparently."},
+    {text:"How can a supplier promote responsible practices in its supply chain?",options:["Assume all subcontractors follow the same practices","Communicate relevant expectations and follow up proportionately","Pass all responsibility to subcontractors","Avoid asking about significant risks"],answer:1,explanation:"Clear expectations and proportionate follow-up help identify and address supply-chain risks."},
+    {text:"Which approach best supports trustworthy supplier records?",options:["Keep accurate records and protect confidential information","Change records to match a preferred outcome","Share customer information with anyone who asks","Delete records when a concern is raised"],answer:0,explanation:"Accurate records and appropriate information protection are core responsible-business practices."}
+  ];
   const supplierQuestionnaire=[
-    ["governance","Does your company maintain policies or procedures for ethical business conduct and anti-bribery?"],
-    ["labor","Are workers informed of their employment terms and able to raise concerns without retaliation?"],
-    ["safety","Does your company identify workplace hazards and provide appropriate safety training?"],
-    ["environment","Do you monitor or manage significant environmental impacts such as energy, water, or waste?"],
-    ["supply-chain","Do you communicate relevant responsible-business expectations to key subcontractors or suppliers?"]
+    ["quality","1. สินค้า/บริการ มีคุณภาพตรงตามต้องการ"],
+    ["certification","2. เอกสารการรับรองคุณภาพสินค้า เช่น COA, MSDS, อย., มอก.",["COA","MSDS","อย.","มอก.","เอกสารรับรองคุณภาพสินค้าอื่นๆ"],10],
+    ["traceability","3. การตรวจสอบย้อนกลับผลิตภัณฑ์ กระบวนการ หรือการให้บริการ"],
+    ["standards","4. ระบบมาตรฐานสินค้า/มาตรฐานอุตสาหกรรม เช่น GHPs, HACCP, ISO, อื่นๆ",["GHPs","HACCP","ISO","เอกสารระบบมาตรฐานสินค้า/มาตรฐานอุตสาหกรรมอื่นๆ"],10],
+    ["quality-process","5. กระบวนการรับผิดชอบ/รับประกัน กรณีพบความไม่สอดคล้องของคุณภาพสินค้า/ข้อบกพร่อง"],
+    ["qualified-staff","6. บุคลากรมีความชำนาญเฉพาะด้าน และได้รับการอนุญาตหรือรับรองตามกฎหมายกำหนด (ถ้าเกี่ยวข้อง)"],
+    ["self-assessment","7. ได้รับการประเมินตนเองตามนโยบายด้านการจัดหาอย่างยั่งยืนและแนวปฏิบัติสำหรับคู่ค้าธุรกิจของ CPF", "system"],
+    ["policy-accepted","8. การตอบรับนโยบายด้านการจัดหาอย่างยั่งยืนและแนวปฏิบัติสำหรับคู่ค้าธุรกิจของ CPF", "system"],
+    ["credibility","9. ความน่าเชื่อถือเป็นที่ยอมรับ เช่น มีการจดทะเบียนการค้า หรือมีประสบการณ์ในการทำงาน",["ใบจดทะเบียนการค้า","เอกสารความน่าเชื่อถือที่เป็นที่ยอมรับอื่นๆ"],10],
+    ["capacity","10. ความสามารถในการตอบสนองความต้องการของ CPF เช่น ปริมาณสินค้า/รถขนส่งเพียงพอ"],
+    ["facilities","11. สถานประกอบการ เครื่องจักร เครื่องมือ อุปกรณ์ขนส่ง และสิ่งอำนวยความสะดวกได้มาตรฐานและได้รับอนุญาตตามกฎหมาย",["มอก.","ใบอนุญาต รง.4","เอกสารการรับรองอื่นๆ"],10],
+    ["food-audit","12. การตรวจประเมินสถานประกอบการ กรณีสินค้า/บริการอาจกระทบคุณภาพและความปลอดภัยอาหาร"]
   ];
   const initial = {
     requests: initialRequests.map(policyFields),
+    registration: { status:"Draft", cocAccepted:false, step:1, data:{}, categories:[{main:"",sub:"",material:"",details:"",files:[]}] },
     profile: {
       company: COMPANY.name, id: COMPANY.id, registration: "US-OR-927461", contact: COMPANY.contact,
       email: COMPANY.email, phone: COMPANY.phone, site: "2400 Harbor Way, Suite 100, Portland, OR 97201",
@@ -82,12 +102,12 @@
     },
     onboarding: {
       eLearning: {status:"Completed",updated:"2026-10-04"},
-      selfRegistration: {status:"Submitted",updated:"2026-10-15"},
+      selfRegistration: {status:"Not Started",updated:""},
       procurementReview: {status:"Completed",updated:"2026-10-17"},
       tasks: {"sourcing-policy":0,"sustainability-risk":0,"supplier-questionnaire":0},
       learningQuizAnswers: {},
       learningQuizResults: {},
-      learningFlow: {videoCompleted:false,consentAccepted:false,answers:{},result:null},
+      learningFlow: {videoCompleted:false,consentAccepted:false,answers:{},result:null,quizVersion:2},
       riskAnswers: {},
       questionnaireAnswers: {},
       announcement: {status:"Not Started"},
@@ -119,23 +139,23 @@
       parsed.profile.contacts=parsed.profile.contacts||structuredClone(initial.profile.contacts);
       parsed.profile.factories=parsed.profile.factories||structuredClone(initial.profile.factories);
       parsed.profile.products=parsed.profile.products||structuredClone(initial.profile.products);
+      parsed.registration=parsed.registration||structuredClone(initial.registration);
       parsed.onboarding=parsed.onboarding||structuredClone(initial.onboarding);
       parsed.onboarding.tasks=parsed.onboarding.tasks||structuredClone(initial.onboarding.tasks);
       parsed.onboarding.learningQuizAnswers=parsed.onboarding.learningQuizAnswers||{};
       parsed.onboarding.learningQuizResults=parsed.onboarding.learningQuizResults||{};
       parsed.onboarding.learningFlow=parsed.onboarding.learningFlow||structuredClone(initial.onboarding.learningFlow);
       const learning=parsed.onboarding.learningFlow;
+      if(learning.quizVersion!==2) { learning.answers={}; learning.result=null; learning.quizVersion=2; }
       parsed.onboarding.tasks["sourcing-policy"]=learning.videoCompleted?(learning.consentAccepted?(learning.result?.passed?3:2):1):0;
       parsed.onboarding.riskAnswers=parsed.onboarding.riskAnswers||{};
       parsed.onboarding.questionnaireAnswers=parsed.onboarding.questionnaireAnswers||{};
-      const savedQuestionnaire=parsed.onboarding.questionnaireAnswers,migratedQuestionnaire={};
-      for(const [key,value] of Object.entries(savedQuestionnaire)) {
-        const legacyIndex=/^\d+$/.test(key)?Number(key):-1;
-        const questionKey=legacyIndex>=0?supplierQuestionnaire[legacyIndex]?.[0]:key;
-        if(questionKey)migratedQuestionnaire[questionKey]=typeof value==="boolean"?(value?"Yes":""):(value||"");
+      if(parsed.onboarding.questionnaireVersion!==2) {
+        parsed.onboarding.questionnaireAnswers={};
+        parsed.onboarding.tasks["supplier-questionnaire"]=0;
+        parsed.onboarding.questionnaireVersion=2;
       }
-      parsed.onboarding.questionnaireAnswers=migratedQuestionnaire;
-      if(supplierQuestionnaire.some(([key])=>!["Yes","Partially","No","Not applicable"].includes(migratedQuestionnaire[key])))parsed.onboarding.tasks["supplier-questionnaire"]=0;
+      parsed.onboarding.questionnaireAnswers=parsed.onboarding.questionnaireAnswers||{};
       parsed.documents=parsed.documents||structuredClone(initial.documents);
       parsed.documents.forEach((document,index)=>{
         document.id=document.id||`DOC-${String(index+1).padStart(4,"0")}`;
@@ -203,7 +223,7 @@
   }
   const onboardingTasks=[
     {id:"sourcing-policy",title:"Sustainable Sourcing Policy and Supplier Guiding Principles",category:"Learning",required:3,description:"Watch the e-learning video, accept the policy document, then complete the policy questionnaire.",icon:"▤"},
-    {id:"sustainability-risk",title:"Sustainability Risk Assessment",category:"Assessment",required:1,description:"Share information about your environmental, social, and governance practices.",icon:"◈"},
+    {id:"sustainability-risk",title:"Sustainability Risk Assessment",category:"Assessment",required:1,description:"Complete the topic assessment when the demo screening flags a risk.",icon:"◈"},
     {id:"supplier-questionnaire",title:"New Supplier Selection Questionnaire",category:"Questionnaire",required:1,description:"Complete the supplier pre-screening questionnaire for your company.",icon:"☷"}
   ];
   function taskCount(id) { return Math.min(onboardingTasks.find(t=>t.id===id)?.required||0,Number(db.onboarding.tasks[id])||0); }
@@ -215,10 +235,10 @@
   }
   function riskAssessmentState() {
     if(!questionnaireAvailable()||!taskCount("supplier-questionnaire"))return "pending";
-    return supplierQuestionnaire.some(([key])=>["Partially","No"].includes(db.onboarding.questionnaireAnswers[key]))?"required":"not-required";
+    return supplierQuestionnaire.some(([key,,type])=>type!=="system"&&db.onboarding.questionnaireAnswers[key]?.answer==="No")?"required":"not-required";
   }
   function riskAssessmentMessage() {
-    return riskAssessmentState()==="pending"?"Complete and submit the New Supplier Selection Questionnaire first. Additional assessment is required only if a response is Partially or No.":"No risk identified from the submitted questionnaire. Additional assessment is not required.";
+    return riskAssessmentState()==="pending"?"Complete and submit the New Supplier Selection Questionnaire first. In this demo, any No response triggers a follow-up assessment.":"No No responses were identified in the demo questionnaire. Additional assessment is not required.";
   }
   function requiredOnboardingTasks() {
     return onboardingTasks.filter(task=>task.id!=="sustainability-risk"||riskAssessmentState()!=="not-required");
@@ -237,7 +257,326 @@
       {title:"New supplier evaluation result",description:"Final supplier evaluation outcome",status:db.onboarding.evaluation.status==="Completed"?"Completed":announced?"In Progress":"Not Started"}
     ];
   }
+  const REG_STEPS=["ข้อมูลทั่วไป","เอกสารสำคัญ","ข้อมูลกลุ่มสินค้า","ตรวจสอบข้อมูล"];
+  const REG_COUNTRIES=["ไทย","ลาว","กัมพูชา","เมียนมา","เวียดนาม","มาเลเซีย","สิงคโปร์","อินโดนีเซีย","ฟิลิปปินส์","จีน","ญี่ปุ่น","เกาหลีใต้","อินเดีย","สหรัฐอเมริกา","สหราชอาณาจักร","เยอรมนี","ออสเตรเลีย"];
+  const REG_COMPANY_PREFIX=["บจก.","บมจ.","หจก.","ห้างหุ้นส่วนสามัญ","สหกรณ์","วิสาหกิจชุมชน"];
+  const REG_PERSON_PREFIX=["นาย","นาง","นางสาว","ดร."];
+  const REG_POSITIONS=["เจ้าของกิจการ","กรรมการผู้จัดการ","ผู้จัดการ","เจ้าหน้าที่/พนักงาน","เจ้าหน้าที่ฝ่ายขาย","เจ้าหน้าที่ฝ่ายบัญชี","อื่นๆ"];
+  const REG_DEPARTMENTS=["ฝ่ายบริหาร","ฝ่ายขาย","ฝ่ายจัดซื้อ","ฝ่ายผลิต","ฝ่ายควบคุมคุณภาพ","ฝ่ายบัญชีและการเงิน","อื่นๆ"];
+  // Sample master data only; production must load the full province/district/sub-district lists.
+  const REG_ADDRESS={
+    "กรุงเทพมหานคร":{"บางรัก":["สีลม","สุริยวงศ์","บางรัก","มหาพฤฒาราม","สี่พระยา"],"คลองเตย":["คลองเตย","คลองตัน","พระโขนง"],"จตุจักร":["จตุจักร","ลาดยาว","จอมพล"]},
+    "นนทบุรี":{"เมืองนนทบุรี":["สวนใหญ่","ตลาดขวัญ","บางเขน"],"ปากเกร็ด":["ปากเกร็ด","บางตลาด"]},
+    "สมุทรปราการ":{"เมืองสมุทรปราการ":["ปากน้ำ","สำโรงเหนือ"],"บางพลี":["บางพลีใหญ่","บางแก้ว"]},
+    "ชลบุรี":{"เมืองชลบุรี":["บางปลาสร้อย","เสม็ด"],"ศรีราชา":["ศรีราชา","สุรศักดิ์"]},
+    "เชียงใหม่":{"เมืองเชียงใหม่":["ศรีภูมิ","พระสิงห์"],"สารภี":["ยางเนิ้ง","ไชยสถาน"]}
+  };
+  // Sample master data only; replace with the real Main / Sub / Material Group lists.
+  const REG_PRODUCTS={
+    "วัตถุดิบอาหาร":{"เนื้อสัตว์และผลิตภัณฑ์":["เนื้อไก่","เนื้อสุกร","เนื้อสัตว์น้ำ"],"พืชผักและผลไม้":["ผักสด","ผลไม้สด","ธัญพืช"]},
+    "บรรจุภัณฑ์":{"บรรจุภัณฑ์พลาสติก":["ถุงพลาสติก","ถาดพลาสติก"],"บรรจุภัณฑ์กระดาษ":["กล่องกระดาษ","ฉลากและสติกเกอร์"]},
+    "อะไหล่และอุปกรณ์":{"อะไหล่เครื่องจักร":["ลูกปืนและซีล","วาล์วและท่อ"],"อุปกรณ์ความปลอดภัย":["อุปกรณ์ป้องกันส่วนบุคคล","เวชภัณฑ์"]},
+    "บริการ":{"โลจิสติกส์":["ขนส่งควบคุมอุณหภูมิ","คลังสินค้า"],"บริการสนับสนุน":["ทำความสะอาด","กำจัดแมลง"]}
+  };
+  const chkThai=v=>/^[\u0E00-\u0E7F\s.]+$/.test(v)?"":"กรอกเป็นภาษาไทยเท่านั้น";
+  const chkEn=v=>/^[A-Za-z\s.'-]+$/.test(v)?"":"กรอกเป็นภาษาอังกฤษเท่านั้น";
+  const chkPhone=v=>/^\d{9,15}$/.test(v)?"":"ระบุตัวเลข 9-15 หลัก";
+  const chkEmail=v=>/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)?"":"รูปแบบอีเมลไม่ถูกต้อง";
+  const chkCoord=(min,max,name)=>v=>/^-?\d+(\.\d+)?$/.test(v)&&Number(v)>=min&&Number(v)<=max?"":`${name}ต้องเป็นตัวเลขระหว่าง ${min} ถึง ${max}`;
+  function chkRegDate(v) {
+    const m=/^(\d{2})-(\d{2})-(\d{4})$/.exec(v);
+    if(!m)return "ระบุวันที่ในรูปแบบ DD-MM-YYYY";
+    const date=new Date(Number(m[3]),Number(m[2])-1,Number(m[1]));
+    return date.getFullYear()===Number(m[3])&&date.getMonth()===Number(m[2])-1&&date.getDate()===Number(m[1])?"":"วันที่ไม่ถูกต้อง";
+  }
+  const regPerson=(p,same)=>{
+    const lock=d=>same&&Boolean(d[`${p}same`]);
+    return [
+      ...(same?[{k:`${p}same`,label:"ใช้ข้อมูลเดียวกับผู้ใช้งานระบบ",t:"checkbox"}]:[]),
+      {k:`${p}prefix`,label:"คำนำหน้า",t:"select",opts:REG_PERSON_PREFIX,req:1,ph:"เลือกคำนำหน้า"},
+      {k:`${p}firstTh`,label:"ชื่อ (ไทย)",t:"text",req:1,max:255,check:chkThai,ph:"ระบุชื่อ"},
+      {k:`${p}lastTh`,label:"นามสกุล (ไทย)",t:"text",req:1,max:255,check:chkThai,span:2,ph:"ระบุนามสกุล"},
+      {k:`${p}firstEn`,label:"ชื่อ (อังกฤษ)",t:"text",max:255,check:chkEn,span:2,ro:lock,ph:"First name"},
+      {k:`${p}lastEn`,label:"นามสกุล (อังกฤษ)",t:"text",max:255,check:chkEn,span:2,ro:lock,ph:"Last name"},
+      {k:`${p}position`,label:"ตำแหน่ง",t:"select",opts:REG_POSITIONS,req:1,ph:"เลือกตำแหน่ง",reset:[`${p}positionOther`]},
+      {k:`${p}positionOther`,label:"ระบุตำแหน่งอื่น",t:"text",req:1,max:255,ph:"กรณีเลือกอื่นๆ โปรดระบุตำแหน่ง",dis:d=>d[`${p}position`]!=="อื่นๆ"},
+      {k:`${p}dept`,label:"หน่วยงาน",t:"select",opts:REG_DEPARTMENTS,req:1,ph:"เลือกหน่วยงาน",reset:[`${p}deptOther`]},
+      {k:`${p}deptOther`,label:"ระบุหน่วยงานอื่น",t:"text",req:1,max:255,ph:"กรณีเลือกอื่นๆ โปรดระบุหน่วยงาน",dis:d=>d[`${p}dept`]!=="อื่นๆ"},
+      {k:`${p}phone`,label:"เบอร์โทรศัพท์",t:"text",mode:"tel",req:1,check:chkPhone,span:2,ro:lock,ph:"ระบุเบอร์โทรศัพท์"},
+      {k:`${p}email`,label:"อีเมล",t:"text",mode:"email",req:1,check:chkEmail,span:2,ro:lock,ph:"ระบุอีเมล"}
+    ];
+  };
+  const REG_STEP1=[
+    {title:"ข้อมูลทั่วไป",fields:[
+      {k:"companyType",label:"ประเภทบริษัท",t:"radio",opts:["นิติบุคคล","บุคคลธรรมดา"],req:1},
+      {k:"country",label:"ประเทศที่จดทะเบียน",t:"select",opts:REG_COUNTRIES,req:1,ph:"เลือกประเทศ"},
+      {k:"regNo",label:"เลขทะเบียนนิติบุคคล",t:"text",req:1,max:20,ph:"ระบุเลขทะเบียน",check:v=>/^[A-Za-z0-9]+$/.test(v)?"":"ใช้ตัวอักษรหรือตัวเลขเท่านั้น ห้ามมีอักขระพิเศษ"},
+      {k:"certDate",label:"วันที่ให้การรับรอง",t:"date",req:1,ph:"DD-MM-YYYY",check:chkRegDate},
+      {k:"vatRegistered",label:"การจดทะเบียนภาษีมูลค่าเพิ่ม",t:"radio",opts:["จดทะเบียนแล้ว","ยังไม่ได้จดทะเบียน"],req:1},
+      {k:"companyPrefix",label:"คำนำหน้านิติบุคคล",t:"select",opts:REG_COMPANY_PREFIX,req:1,ph:"เลือกคำนำหน้า"},
+      {k:"companyName",label:"ชื่อนิติบุคคล",t:"text",req:1,max:255,span:2,ph:"ระบุชื่อบริษัท"},
+      {k:"businessType",label:"ประเภทธุรกิจผู้ขาย",t:"select",opts:["ตัวแทนจำหน่าย","ผู้ผลิต","สหกรณ์","เกษตรกร"],req:1,ph:"เลือกประเภทธุรกิจผู้ขาย"},
+      {k:"employees",label:"จำนวนพนักงาน",t:"text",mode:"numeric",req:1,ph:"ระบุจำนวนพนักงาน",check:v=>/^\d+$/.test(v)&&Number(v)>0?"":"ระบุจำนวนเต็มมากกว่า 0"},
+      {k:"phone",label:"เบอร์โทรศัพท์",t:"text",mode:"tel",req:1,check:chkPhone,ph:"ระบุเบอร์โทรศัพท์"},
+      {k:"email",label:"อีเมล",t:"text",mode:"email",req:1,check:chkEmail,ph:"ระบุอีเมล"},
+      {k:"branchType",label:"สาขา",t:"radio",opts:["สำนักงานใหญ่","สาขา"],req:1,reset:["branchName"]},
+      {k:"branchCode",label:"รหัสสาขา",t:"text",mode:"numeric",req:1,ph:"ระบุรหัสสาขา",check:v=>/^\d{5}$/.test(v)?"":"ระบุตัวเลข 5 หลัก"},
+      {k:"branchName",label:"ชื่อสาขา",t:"text",req:1,max:255,span:2,ph:"ระบุชื่อสาขา",dis:d=>d.branchType!=="สาขา"}
+    ]},
+    {title:"ข้อมูลผู้ติดต่อ",fields:regPerson("c_",true)},
+    {title:"ข้อมูลเจ้าของบริษัท (หรือผู้มีอำนาจลงนามเอกสาร)",fields:regPerson("o_",false)},
+    {title:"ที่อยู่บริษัท หรือสถานประกอบการ",fields:[
+      {k:"a_country",label:"ประเทศ",t:"select",opts:REG_COUNTRIES,req:1,ph:"เลือกประเทศ"},
+      {k:"a_line1",label:"ที่อยู่ บรรทัดที่ 1",t:"text",req:1,max:500,span:3,ph:"ระบุที่อยู่ บรรทัดที่ 1"},
+      {k:"a_line2",label:"ที่อยู่ บรรทัดที่ 2 (ไม่บังคับ)",t:"text",max:500,span:4,ph:"ระบุที่อยู่ บรรทัดที่ 2"},
+      {k:"a_province",label:"จังหวัด",t:"select",opts:Object.keys(REG_ADDRESS),req:1,ph:"เลือกจังหวัด",reset:["a_district","a_sub"]},
+      {k:"a_district",label:"เขต/อำเภอ",t:"select",opts:d=>Object.keys(REG_ADDRESS[d.a_province]||{}),req:1,ph:"เลือกเขต/อำเภอ",reset:["a_sub"],dis:d=>!d.a_province},
+      {k:"a_sub",label:"แขวง/ตำบล",t:"select",opts:d=>REG_ADDRESS[d.a_province]?.[d.a_district]||[],req:1,ph:"เลือกแขวง/ตำบล",dis:d=>!d.a_district},
+      {k:"a_postal",label:"รหัสไปรษณีย์",t:"text",mode:"numeric",req:1,ph:"ระบุรหัสไปรษณีย์",check:v=>/^\d{5}$/.test(v)?"":"ระบุรหัสไปรษณีย์ 5 หลัก"}
+    ]},
+    {title:"พิกัดที่ตั้งของบริษัท หรือสถานประกอบการ",hint:"กรุณาระบุตำแหน่งที่ตั้งของบริษัท หรือสถานประกอบการ",map:true,fields:[
+      {k:"lat",label:"ละติจูด",t:"text",mode:"decimal",req:1,span:2,ph:"ระบุละติจูด เช่น 12.1234567",check:chkCoord(-90,90,"ละติจูด")},
+      {k:"lng",label:"ลองจิจูด",t:"text",mode:"decimal",req:1,span:2,ph:"ระบุลองจิจูด เช่น 100.1234567",check:chkCoord(-180,180,"ลองจิจูด")},
+      {k:"mapQuery",label:"สถานที่ตั้งบริษัท หรือสถานประกอบการ (ค้นหาด้วย Google Maps)",t:"text",span:4,ph:"ค้นหาสถานที่"}
+    ]}
+  ];
+  function regDocFields(d) {
+    const list=d.companyType==="บุคคลธรรมดา"
+      ?[["idCopy","สำเนาบัตรประชาชน","pdf"],["houseReg","สำเนาทะเบียนบ้าน","pdf"],["sitePhotos","รูปถ่ายสถานประกอบการ","img"]]
+      :[["companyInfo","ข้อมูลบริษัท","pdf"],["certificate","หนังสือรับรอง","pdf"],["vat20","ภ.พ.20","pdf"],["signerId","สำเนาบัตรประชาชนผู้มีอำนาจลงนาม","pdf"],["sitePhotos","รูปถ่ายสถานประกอบการ","img"]];
+    return list.flatMap(([id,label,kind])=>{
+      const field={k:`f_${id}`,label,t:"file",kind,req:1};
+      if(id==="vat20")field.show=x=>x.vatRegistered==="จดทะเบียนแล้ว";
+      return id==="sitePhotos"?[field,{k:"photoConfirm",label:"ฉันยืนยันว่ารูปถ่ายสถานประกอบการเป็นปัจจุบันจากสถานที่จริง และมีอายุไม่เกิน 6 เดือน",t:"checkbox",req:1}]:[field];
+    });
+  }
+  const regCatFields=()=>[
+    {k:"main",label:"กลุ่มสินค้าหลัก (Main Category)",t:"select",opts:Object.keys(REG_PRODUCTS),req:1,ph:"เลือกกลุ่มสินค้าหลัก",reset:["sub","material"]},
+    {k:"sub",label:"กลุ่มสินค้าย่อย (Sub Category)",t:"select",opts:d=>Object.keys(REG_PRODUCTS[d.main]||{}),req:1,ph:"เลือกกลุ่มสินค้าย่อย",reset:["material"],dis:d=>!d.main},
+    {k:"material",label:"กลุ่มวัสดุ (Material Group)",t:"select",opts:d=>REG_PRODUCTS[d.main]?.[d.sub]||[],req:1,span:2,ph:"เลือกกลุ่มวัสดุ",dis:d=>!d.sub},
+    {k:"details",label:"รายละเอียดของกลุ่มสินค้า (Category Details)",t:"textarea",max:5000,ph:"ระบุรายละเอียด (ไม่เกิน 5000 ตัวอักษร)"},
+    {k:"files",label:"แคตตาล็อก (Catalog)",t:"file",kind:"pdf",req:1}
+  ];
+  let regShowAll=false;
+  const regTouched=new Set();
+  const registrationDone=()=>db.registration.status==="Submitted";
+  const regScopeData=scope=>scope==="reg"?db.registration.data:db.registration.categories[Number(String(scope).slice(4))];
+  const regFieldsFor=(scope,d)=>scope==="reg"?[...REG_STEP1.flatMap(s=>s.fields),...regDocFields(d)]:regCatFields();
+  const regId=(scope,k)=>`reg-${scope.replace(":","-")}-${k}`;
+  const regShowError=(scope,k)=>regShowAll||regTouched.has(`${scope}|${k}`);
+  function regFieldError(f,d) {
+    if((f.show&&!f.show(d))||f.dis?.(d))return "";
+    const req=Boolean(f.req);
+    if(f.t==="file")return req&&!(d[f.k]||[]).length?"โปรดอัปโหลดไฟล์":"";
+    if(f.t==="checkbox")return req&&!d[f.k]?"โปรดยืนยันข้อความนี้":"";
+    const v=String(d[f.k]??"").trim();
+    if(!v)return req?(["select","radio"].includes(f.t)?`โปรดเลือก${f.label}`:`โปรดระบุ${f.label}`):"";
+    if(f.max&&v.length>f.max)return `ไม่เกิน ${f.max} ตัวอักษร`;
+    return f.check?f.check(v,d):"";
+  }
+  function regFieldHtml(scope,f,d) {
+    const dis=Boolean(f.dis?.(d)), ro=Boolean(f.ro?.(d)), id=regId(scope,f.k), val=d[f.k]??"", a=`'${scope}','${f.k}'`;
+    const span=f.span||(["file","textarea","checkbox"].includes(f.t)?4:1);
+    const err=regShowError(scope,f.k)?regFieldError(f,d):"";
+    const opts=typeof f.opts==="function"?f.opts(d):(f.opts||[]);
+    const star=f.req?'<span class="required"> *</span>':"";
+    const events=`oninput="window.portalRegInput(${a},this.value)" onblur="window.portalRegBlur(${a})"`;
+    let control="";
+    if(f.t==="select")control=`<select class="field-control" id="${id}" ${dis?"disabled":""} onchange="window.portalRegSet(${a},this.value)" onblur="window.portalRegBlur(${a})"><option value="">${escapeHtml(f.ph||"เลือก")}</option>${opts.map(o=>`<option ${val===o?"selected":""}>${escapeHtml(o)}</option>`).join("")}</select>`;
+    else if(f.t==="radio")control=`<div class="reg-radio-row" role="radiogroup" aria-label="${escapeHtml(f.label)}">${opts.map(o=>`<label class="reg-radio"><input type="radio" name="${id}" value="${escapeHtml(o)}" ${val===o?"checked":""} onchange="window.portalRegSet(${a},this.value)"><span>${escapeHtml(o)}</span></label>`).join("")}</div>`;
+    else if(f.t==="textarea")control=`<textarea class="field-control" id="${id}" rows="4" placeholder="${escapeHtml(f.ph||"")}" ${events}>${escapeHtml(val)}</textarea>`;
+    else if(f.t==="date")control=`<div class="reg-date"><input class="field-control" id="${id}" type="text" inputmode="numeric" value="${escapeHtml(val)}" placeholder="${escapeHtml(f.ph||"")}" autocomplete="off" ${events}><button type="button" class="reg-date-button" aria-label="เลือกวันที่" onclick="window.portalRegDatePick(${a})">▦</button><input type="date" class="reg-date-native" id="${id}-native" tabindex="-1" aria-hidden="true" onchange="window.portalRegDateNative(${a},this.value)"></div>`;
+    else if(f.t==="file") {
+      const files=Array.isArray(val)?val:[], img=f.kind==="img";
+      control=`<div class="upload-box"><div class="helper">${img?"PNG หรือ JPG":"PDF"} · สูงสุด 5 MB ต่อไฟล์ · สูงสุด 5 ไฟล์ (${files.length}/5) · ต้นแบบนี้เก็บเฉพาะชื่อไฟล์ในเบราว์เซอร์</div><input type="file" id="${id}" multiple accept="${img?".png,.jpg,.jpeg":".pdf"}" onchange="window.portalRegFiles(${a},this.files)" ${files.length>=5?"disabled":""}><div class="file-list">${files.map((x,i)=>`<div class="file-row"><span>▤ &nbsp;${escapeHtml(x.name)} <small>(${(x.size/1024).toFixed(0)} KB)</small></span><button type="button" aria-label="ลบ ${escapeHtml(x.name)}" onclick="window.portalRegRemoveFile(${a},${i})">ลบ</button></div>`).join("")}</div></div>`;
+    } else if(f.t==="checkbox")control=`<label class="reg-check"><input type="checkbox" id="${id}" ${val?"checked":""} onchange="window.portalRegCheck(${a},this.checked)"><span>${escapeHtml(f.label)}${star}</span></label>`;
+    else control=`<input class="field-control" id="${id}" type="text" inputmode="${f.mode||"text"}" value="${escapeHtml(val)}" placeholder="${escapeHtml(f.ph||"")}" autocomplete="off" ${dis?"disabled":""} ${ro?"readonly":""} ${events}>`;
+    const label=f.t==="checkbox"?"":`<label for="${id}">${escapeHtml(f.label)}${star}</label>`;
+    return `<div class="form-field reg-field reg-s${span} ${err?"has-error":""}" data-reg-field="${scope}|${f.k}">${label}${control}<span class="form-error">${escapeHtml(err)}</span></div>`;
+  }
+  function regSectionHtml(scope,title,fields,d,extra="",hint="",after="") {
+    return `<section class="card section-card reg-section"><div class="section-title"><div><h2>${title}</h2>${hint?`<small class="helper">${hint}</small>`:""}</div>${extra}</div><div class="reg-grid">${fields.filter(f=>!f.show||f.show(d)).map(f=>regFieldHtml(scope,f,d)).join("")}</div>${after}</section>`;
+  }
+  function regMapHtml(d) {
+    const lat=String(d.lat??"").trim(), lng=String(d.lng??"").trim();
+    const valid=lat!==""&&lng!==""&&!chkCoord(-90,90,"")(lat)&&!chkCoord(-180,180,"")(lng);
+    const q=valid?`${lat},${lng}`:String(d.mapQuery||"").trim();
+    if(!q)return '<div class="reg-map-empty">ค้นหาสถานที่ หรือระบุละติจูด/ลองจิจูด เพื่อแสดงแผนที่</div>';
+    return `<iframe class="reg-map-frame" title="แผนที่ตำแหน่งที่ตั้ง" src="https://maps.google.com/maps?q=${encodeURIComponent(q)}&z=15&output=embed" loading="lazy" referrerpolicy="no-referrer"></iframe><a class="text-link" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}" target="_blank" rel="noopener noreferrer">เปิดใน Google Maps →</a>`;
+  }
+  function regCocHtml() {
+    return `<section class="card section-card reg-section"><h2>ข้อกำหนดและเงื่อนไข (CoC / T&amp;D)</h2><div class="notice">เข้าสู่ระบบด้วย ${escapeHtml(COMPANY.email)} · ผู้ขายใหม่ต้องยอมรับ CoC และ T&amp;D ก่อนลงทะเบียนข้อมูลผู้ขาย</div><div class="policy-document policy-preview" role="region" aria-label="CoC and T&amp;D"><h4>จรรยาบรรณคู่ค้าธุรกิจ (Code of Conduct)</h4><ul class="lesson-points"><li>ดำเนินธุรกิจอย่างซื่อสัตย์ โปร่งใส และไม่เสนอหรือรับผลประโยชน์ที่ไม่เหมาะสม</li><li>เคารพสิทธิมนุษยชนและปฏิบัติต่อแรงงานอย่างเป็นธรรม</li><li>ดูแลความปลอดภัยและสิ่งแวดล้อมในการดำเนินงาน</li></ul><h4>ข้อกำหนดและเงื่อนไขการใช้งาน (Terms &amp; Conditions)</h4><ul class="lesson-points"><li>ข้อมูลที่ลงทะเบียนต้องถูกต้อง เป็นปัจจุบัน และสามารถตรวจสอบได้</li><li>บริษัทสามารถขอเอกสารเพิ่มเติมและตรวจสอบข้อมูลของผู้ขายได้</li><li>ผู้ขายรับผิดชอบการรักษาความลับของบัญชีผู้ใช้งาน</li></ul><p class="mock-note">เนื้อหาตัวอย่างสำหรับต้นแบบ ไม่ใช่ข้อกำหนดทางกฎหมายจริง</p></div><label class="commitment-row"><input id="reg-coc" type="checkbox" onchange="window.portalRegCocCheck(this.checked)"><span>Accept CoC and T&amp;D <span class="required">*</span></span></label><div class="reg-actions"><button class="button primary" id="reg-coc-start" disabled onclick="window.portalRegStart()">ยอมรับและเริ่มลงทะเบียน</button></div></section>`;
+  }
+  function regReviewHtml() {
+    const d=db.registration.data;
+    const value=(f,data)=>{
+      if((f.show&&!f.show(data))||f.dis?.(data))return null;
+      const v=data[f.k];
+      if(f.t==="file")return (v||[]).map(x=>x.name).join(", ")||"—";
+      if(f.t==="checkbox")return v?"ยืนยันแล้ว":"ไม่ได้เลือก";
+      return v||"—";
+    };
+    const block=(title,fields,data,step)=>`<section class="card section-card reg-section"><div class="section-title"><h2>${title}</h2><button class="text-link" onclick="window.portalRegGo(${step})">แก้ไข</button></div><div class="info-grid">${fields.map(f=>{const v=value(f,data);return v===null?"":info(f.label.replace(/ \(ไม่บังคับ\)$/,""),v);}).join("")}</div></section>`;
+    return [...REG_STEP1.map(s=>block(s.title,s.fields,d,1)),block("เอกสารสำคัญ",regDocFields(d),d,2),...db.registration.categories.map((c,i)=>block(`กลุ่มสินค้าที่ ${i+1}`,regCatFields(),c,3))].join("");
+  }
+  function regHtml() {
+    const r=db.registration, d=r.data;
+    if(!r.cocAccepted)return `<div class="content-stack">${regCocHtml()}</div>`;
+    let body="";
+    if(r.step===1)body=REG_STEP1.map(s=>regSectionHtml("reg",s.title,s.fields,d,"",s.hint||"",s.map?`<div class="reg-map" id="reg-map">${regMapHtml(d)}</div>`:"")).join("");
+    else if(r.step===2)body=regSectionHtml("reg","เอกสารสำคัญ",regDocFields(d),d,"",d.companyType==="บุคคลธรรมดา"?"เอกสารสำหรับบุคคลธรรมดา":"เอกสารสำหรับนิติบุคคล");
+    else if(r.step===3)body=r.categories.map((c,i)=>regSectionHtml(`cat:${i}`,`กลุ่มสินค้าที่ ${i+1}`,regCatFields(),c,r.categories.length>1?`<button type="button" class="button danger" onclick="window.portalRegRemoveCat(${i})">ลบกลุ่มสินค้า</button>`:"")).join("")+`<div><button type="button" class="button" onclick="window.portalRegAddCat()">＋ เพิ่มกลุ่มสินค้า</button></div>`;
+    else body=`<div class="notice">ตรวจสอบข้อมูลทั้งหมดก่อนส่ง เมื่อส่งข้อมูลแล้ว ระบบจะสร้างโปรไฟล์ผู้ขายจากข้อมูลนี้</div>${regReviewHtml()}`;
+    const steps=REG_STEPS.map((n,i)=>`<div class="wizard-step ${i+1===r.step?"current":i+1<r.step?"done":""}" ${i+1<r.step?`onclick="window.portalRegGo(${i+1})" style="cursor:pointer"`:""}><span>${i+1<r.step?"✓":i+1}</span>${n}</div>`).join("");
+    return `<div class="content-stack"><div class="card wizard-card"><div class="wizard-steps">${steps}</div></div>${body}<div class="card reg-footer">${r.step>1?'<button class="button subtle" onclick="window.portalRegStep(-1)">‹ ย้อนกลับ</button>':'<span class="mock-note">บันทึกข้อมูลอัตโนมัติในเบราว์เซอร์นี้</span>'}${r.step<4?'<button class="button primary" onclick="window.portalRegStep(1)">ต่อไป</button>':'<button class="button primary" onclick="window.portalRegSubmit()">ส่งข้อมูล</button>'}</div></div>`;
+  }
+  function renderRegistration(el) {
+    el.innerHTML=heading("การลงทะเบียนข้อมูลผู้ขาย","ผู้ขายใหม่ต้องลงทะเบียนข้อมูลก่อน ระบบจึงจะสร้างโปรไฟล์ผู้ขายและเปิดงาน onboarding")+'<div id="reg-root"></div>';
+    rerenderReg();
+  }
+  function rerenderReg() {
+    const root=document.getElementById("reg-root");
+    if(!root)return;
+    const y=window.scrollY;
+    root.innerHTML=regHtml();
+    window.scrollTo(0,y);
+  }
+  function regRefreshError(scope,k) {
+    const d=regScopeData(scope), f=d&&regFieldsFor(scope,d).find(x=>x.k===k), node=document.querySelector(`[data-reg-field="${scope}|${k}"]`);
+    if(!f||!node)return;
+    const err=regShowError(scope,k)?regFieldError(f,d):"";
+    node.classList.toggle("has-error",Boolean(err));
+    const target=node.querySelector(".form-error");
+    if(target)target.textContent=err;
+  }
+  function regNormalize(scope) {
+    const d=regScopeData(scope);
+    regFieldsFor(scope,d).forEach(f=>{ if(f.dis?.(d)&&d[f.k])d[f.k]=""; });
+  }
+  function regInput(scope,k,value) {
+    const d=regScopeData(scope);
+    if(!d)return;
+    d[k]=value;saveDb();
+    if(regShowError(scope,k))regRefreshError(scope,k);
+  }
+  function regSet(scope,k,value) {
+    const d=regScopeData(scope), f=d&&regFieldsFor(scope,d).find(x=>x.k===k);
+    if(!f)return;
+    const opts=typeof f.opts==="function"?f.opts(d):f.opts;
+    if(value!==""&&opts&&!opts.includes(value))return;
+    d[k]=value;(f.reset||[]).forEach(key=>{d[key]="";});
+    regNormalize(scope);regTouched.add(`${scope}|${k}`);saveDb();rerenderReg();
+  }
+  function regCheck(scope,k,checked) {
+    const d=regScopeData(scope);
+    if(!d)return;
+    d[k]=Boolean(checked);
+    if(k==="c_same") {
+      const [first,...rest]=COMPANY.contact.split(" ");
+      Object.assign(d,checked?{c_firstEn:first,c_lastEn:rest.join(" "),c_phone:COMPANY.phone.replace(/\D/g,""),c_email:COMPANY.email}:{c_firstEn:"",c_lastEn:"",c_phone:"",c_email:""});
+    }
+    regTouched.add(`${scope}|${k}`);saveDb();rerenderReg();
+  }
+  function regBlur(scope,k) {
+    regTouched.add(`${scope}|${k}`);regRefreshError(scope,k);
+    if(scope==="reg"&&["lat","lng","mapQuery"].includes(k)) { const map=document.getElementById("reg-map"); if(map)map.innerHTML=regMapHtml(db.registration.data); }
+  }
+  function regDatePick(scope,k) {
+    const native=document.getElementById(`${regId(scope,k)}-native`);
+    if(native?.showPicker)native.showPicker();else native?.focus();
+  }
+  function regDateNative(scope,k,iso) {
+    const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(iso||""), d=regScopeData(scope);
+    if(!m||!d)return;
+    d[k]=`${m[3]}-${m[2]}-${m[1]}`;
+    const input=document.getElementById(regId(scope,k));
+    if(input)input.value=d[k];
+    regTouched.add(`${scope}|${k}`);saveDb();regRefreshError(scope,k);
+  }
+  function regAddFiles(scope,k,files) {
+    const d=regScopeData(scope), f=d&&regFieldsFor(scope,d).find(x=>x.k===k);
+    if(!f||f.t!=="file")return;
+    const img=f.kind==="img", allowed=img?["png","jpg","jpeg"]:["pdf"], current=Array.isArray(d[k])?d[k]:[], added=[];
+    for(const file of Array.from(files||[])) {
+      const extension=file.name.split(".").pop().toLowerCase();
+      if(!allowed.includes(extension)) { toast(`${file.name}: รองรับเฉพาะไฟล์ ${img?"PNG หรือ JPG":"PDF"}`);continue; }
+      if(file.size>5*1024*1024) { toast(`${file.name}: ขนาดเกิน 5 MB`);continue; }
+      if(current.length+added.length>=5) { toast("อัปโหลดได้สูงสุด 5 ไฟล์");break; }
+      added.push({name:file.name,size:file.size,type:file.type||extension});
+    }
+    d[k]=[...current,...added];regTouched.add(`${scope}|${k}`);saveDb();rerenderReg();
+  }
+  function regRemoveFile(scope,k,index) {
+    const d=regScopeData(scope);
+    if(!d||!Array.isArray(d[k]))return;
+    d[k].splice(index,1);saveDb();rerenderReg();
+  }
+  function regStepErrors(step) {
+    const out=[], d=db.registration.data;
+    const scan=(scope,fields,data)=>fields.forEach(f=>{const message=regFieldError(f,data);if(message)out.push({scope,k:f.k,message});});
+    if(step===1)REG_STEP1.forEach(s=>scan("reg",s.fields,d));
+    if(step===2)scan("reg",regDocFields(d),d);
+    if(step===3)db.registration.categories.forEach((c,i)=>scan(`cat:${i}`,regCatFields(),c));
+    return out;
+  }
+  function focusFirstRegError() {
+    const node=document.querySelector(".reg-field.has-error");
+    node?.scrollIntoView({block:"center"});
+    node?.querySelector("input:not([type=hidden]),select,textarea")?.focus({preventScroll:true});
+  }
+  function regStep(delta) {
+    const r=db.registration;
+    if(delta>0&&r.step<4&&regStepErrors(r.step).length) { regShowAll=true;rerenderReg();focusFirstRegError();return toast("กรุณากรอกข้อมูลที่จำเป็นให้ครบถ้วนและถูกต้อง"); }
+    regShowAll=false;r.step=Math.max(1,Math.min(4,r.step+delta));saveDb();rerenderReg();window.scrollTo(0,0);
+  }
+  function regGo(step) {
+    const r=db.registration;
+    if(!Number.isInteger(step)||step<1||step>=r.step)return;
+    regShowAll=false;r.step=step;saveDb();rerenderReg();window.scrollTo(0,0);
+  }
+  function regAddCategory() {
+    db.registration.categories.push({main:"",sub:"",material:"",details:"",files:[]});saveDb();rerenderReg();
+  }
+  function regRemoveCategory(index) {
+    if(db.registration.categories.length<=1)return;
+    db.registration.categories.splice(index,1);regTouched.clear();saveDb();rerenderReg();
+  }
+  function applyRegistration() {
+    const r=db.registration, d=r.data, p=db.profile, today=new Date().toISOString().slice(0,10);
+    const name=pre=>`${d[`${pre}prefix`]}${d[`${pre}firstTh`]} ${d[`${pre}lastTh`]}`;
+    const role=pre=>d[`${pre}position`]==="อื่นๆ"?d[`${pre}positionOther`]:d[`${pre}position`];
+    const address=[d.a_line1,d.a_line2,d.a_sub,d.a_district,d.a_province,d.a_postal,d.a_country].filter(Boolean).join(" ");
+    p.company=`${d.companyPrefix} ${d.companyName}`.trim();
+    p.registration=d.regNo;p.contact=name("o_");p.email=d.email;p.phone=d.phone;p.site=address;
+    p.contacts=[
+      {type:"Company owner",name:name("o_"),role:role("o_"),email:d.o_email,phone:d.o_phone,status:"Pending review"},
+      {type:"Contact person",name:name("c_"),role:role("c_"),email:d.c_email,phone:d.c_phone,status:"Pending review"}
+    ];
+    p.factories=[{name:d.branchType==="สาขา"?d.branchName:p.company,location:address,type:"สถานประกอบการ",status:"Pending review"}];
+    p.categories=[...new Set(r.categories.map(c=>c.main))];
+    p.products=r.categories.map(c=>({name:`${c.main} / ${c.sub}`,code:c.material,status:"Pending review"}));
+    regDocFields(d).filter(f=>f.t==="file"&&(!f.show||f.show(d))).forEach(f=>(d[f.k]||[]).forEach(file=>{
+      db.documents.push({id:`DOC-${String(db.documents.length+1).padStart(4,"0")}`,name:file.name,type:f.label,related:p.company,issue:today,expiry:"",status:"Pending",group:"Registration",fileName:file.name,fileType:file.type,fileSize:file.size,history:[{action:"Uploaded",date:today,version:1,fileName:file.name}]});
+    }));
+    r.status="Submitted";r.submittedAt=new Date().toISOString();
+    db.onboarding.selfRegistration={status:"Submitted",updated:today};
+  }
+  function regSubmit() {
+    const r=db.registration;
+    if(r.status==="Submitted")return;
+    for(const step of [1,2,3]) {
+      if(regStepErrors(step).length) { r.step=step;regShowAll=true;saveDb();rerenderReg();focusFirstRegError();return toast("กรุณาตรวจสอบข้อมูลที่ยังไม่ครบถ้วนก่อนส่ง"); }
+    }
+    if(!window.confirm("ยืนยันการส่งข้อมูลการลงทะเบียนผู้ขาย?"))return;
+    applyRegistration();saveDb();regShowAll=false;regTouched.clear();
+    page="Company Profile";profileTab="Company information";render();toast("ลงทะเบียนสำเร็จ ระบบสร้างโปรไฟล์ผู้ขายแล้ว");
+  }
+  function regStart() {
+    if(!document.getElementById("reg-coc")?.checked)return toast("กรุณายอมรับ CoC และ T&D");
+    db.registration.cocAccepted=true;db.registration.cocAt=new Date().toISOString();saveDb();rerenderReg();
+  }
   function render() {
+    if(!registrationDone()&&page!=="Supplier Registration")page="Supplier Registration";
     const root = document.getElementById("app");
     root.innerHTML = `<div class="shell">
       <div class="mobile-overlay" onclick="window.portalMenu(false)"></div>
@@ -245,7 +584,7 @@
         <div class="brand"><div class="brand-mark">N</div><div class="brand-name">northstar<small>Supplier portal</small></div></div>
         <div class="company-mini"><span>SUPPLIER ACCOUNT</span><strong>${escapeHtml(db.profile.company)}</strong></div>
         <div class="nav-label">Workspace</div><nav class="nav-list" aria-label="Main navigation">
-          ${[["Supplier Onboarding","✓"],["Sample Request","◫"],["Company Profile","⌂"],["Documents","▤"],["Notifications","♧"]].map(([name,icon])=>`<button class="nav-item ${page===name||(page==="Onboarding Task"&&name==="Supplier Onboarding")?"active":""}" onclick="window.portalNav('${name}')"><span class="nav-icon">${icon}</span>${name}${name==="Sample Request"&&db.requests.some(r=>r.status==="Action Required")?'<span class="nav-count">1</span>':""}</button>`).join("")}
+          ${(registrationDone()?[["Supplier Onboarding","✓"],["Sample Request","◫"],["Company Profile","⌂"],["Documents","▤"],["Notifications","♧"]]:[["Supplier Registration","✎"]]).map(([name,icon])=>`<button class="nav-item ${page===name||(page==="Onboarding Task"&&name==="Supplier Onboarding")?"active":""}" onclick="window.portalNav('${name}')"><span class="nav-icon">${icon}</span>${name}${name==="Sample Request"&&db.requests.some(r=>r.status==="Action Required")?'<span class="nav-count">1</span>':""}</button>`).join("")}
         </nav>
         <div class="sidebar-bottom">
           <div class="help-card"><strong>Need a hand?</strong><p>Our supplier support team is here to help with your onboarding.</p><button onclick="window.portalNav('Help & Support')">Contact support →</button></div>
@@ -258,7 +597,7 @@
         <div class="content" id="content"></div>
       </main><div class="toast-region" aria-live="polite"></div></div>`;
     const content = document.getElementById("content");
-    const routes = {"Supplier Onboarding":renderOnboarding,"Onboarding Task":renderOnboardingTask,"Sample Request":renderList,"Create Sample Request":renderWizard,"Sample Request Details":renderDetails,"Respond to Feedback":renderResponse,"Company Profile":renderProfile,Documents:renderDocuments,Notifications:renderNotifications,"Help & Support":renderHelp};
+    const routes = {"Supplier Registration":renderRegistration,"Supplier Onboarding":renderOnboarding,"Onboarding Task":renderOnboardingTask,"Sample Request":renderList,"Create Sample Request":renderWizard,"Sample Request Details":renderDetails,"Respond to Feedback":renderResponse,"Company Profile":renderProfile,Documents:renderDocuments,Notifications:renderNotifications,"Help & Support":renderHelp};
     (routes[page] || renderOnboarding)(content);
   }
   function heading(title, desc, action="") { return `<div class="page-heading"><div><h1>${title}</h1><p>${desc}</p></div>${action}</div>`; }
@@ -276,12 +615,47 @@
   }
   const riskTopics=[
     ["climate","Climate change and greenhouse gas emissions"],
-    ["sourcing","Responsible sourcing and traceability"],
-    ["workplace","Worker health, safety, and labor practices"],
-    ["ethics","Business ethics and anti-corruption"],
-    ["privacy","Data protection and information security"],
-    ["continuity","Business continuity and operational resilience"]
+    ["sourcing","Responsible sourcing"],
+    ["workplace","Occupational health and safety"],
+    ["labor","Human rights and labor practices"],
+    ["food-safety","Food quality and safety"],
+    ["ethics","Business ethics and conduct"]
   ];
+  function questionnaireSystemAnswer(key) {
+    if(key==="policy-accepted")return taskCount("sourcing-policy")===3?"Yes":"No";
+    if(key==="self-assessment")return riskAssessmentState()==="not-required"||taskCount("sustainability-risk")>=1?"Yes":"No";
+    return "";
+  }
+  function questionnaireComplete() {
+    return supplierQuestionnaire.every(([key,,type,limit])=>{
+      if(type==="system")return true;
+      const response=db.onboarding.questionnaireAnswers[key]||{};
+      if(!["Yes","No"].includes(response.answer))return false;
+      if(response.answer==="No")return true;
+      const maxFiles=limit||1;
+      return (!supplierQuestionnaire.find(([questionKey])=>questionKey===key)?.[2]||Boolean(response.documentType))&&Array.isArray(response.files)&&response.files.length>0&&response.files.length<=maxFiles;
+    });
+  }
+  function renderSupplierQuestionnaire(done) {
+    const answers=db.onboarding.questionnaireAnswers;
+    const userQuestions=supplierQuestionnaire.filter(([, ,type])=>type!=="system");
+    const answered=userQuestions.filter(([key])=>["Yes","No"].includes(answers[key]?.answer)).length;
+    const locked=done>=1;
+    const fields=supplierQuestionnaire.map(([key,question,documents,maxFiles])=>{
+      if(documents==="system") {
+        const value=questionnaireSystemAnswer(key);
+        return `<article class="questionnaire-item questionnaire-generated"><strong>${escapeHtml(question)}</strong><span>${badge(value||"Pending")}</span><small>System generated · not editable</small></article>`;
+      }
+      const response=answers[key]||{answer:"",documentType:"",files:[],note:""};
+      const conditional=response.answer==="Yes";
+      const limit=maxFiles||1;
+      const documentField=Array.isArray(documents)?`<label class="form-field">Document type <select class="field-control" onchange="window.portalQuestionnaireDocument('${key}',this.value)" ${locked?"disabled":""}><option value="">Select a document type</option>${documents.map(option=>`<option value="${escapeHtml(option)}" ${response.documentType===option?"selected":""}>${escapeHtml(option)}</option>`).join("")}</select></label>`:"";
+      const uploadField=conditional?`<label class="form-field">Supporting document <span class="required">*</span><span class="helper">PDF only · maximum 5 MB per file · up to ${limit} file${limit===1?"":"s"}</span><input type="file" accept=".pdf,application/pdf" ${limit>1?"multiple":""} onchange="window.portalQuestionnaireFiles('${key}',this.files)" ${locked?"disabled":""}></label><div class="file-list">${(response.files||[]).map((file,index)=>`<div class="file-row"><span>${escapeHtml(file.name)} <small>(${(file.size/1024).toFixed(0)} KB)</small></span><button type="button" aria-label="Remove ${escapeHtml(file.name)}" onclick="window.portalQuestionnaireRemoveFile('${key}',${index})" ${locked?"disabled":""}>Remove</button></div>`).join("")}</div>`:"";
+      const noteField=`<label class="form-field questionnaire-note">หมายเหตุ <textarea class="field-control" maxlength="5000" rows="3" oninput="window.portalQuestionnaireNote('${key}',this.value)" ${locked?"disabled":""}>${escapeHtml(response.note||"")}</textarea><small>${(response.note||"").length}/5000 characters</small></label>`;
+      return `<article class="questionnaire-item"><div class="questionnaire-question"><strong>${escapeHtml(question)}</strong><span class="required">*</span></div><div class="questionnaire-answer" role="radiogroup" aria-label="${escapeHtml(question)}">${["Yes","No"].map(value=>`<label class="questionnaire-choice"><input type="radio" name="onboarding-${key}" value="${value}" ${response.answer===value?"checked":""} onchange="window.portalQuestionnaireAnswer('${key}',this.value)" ${locked?"disabled":""}><span>${value}</span></label>`).join("")}</div>${conditional?`<div class="questionnaire-conditional">${documentField}${uploadField}</div>`:""}${noteField}</article>`;
+    }).join("");
+    return `<div class="notice">Answer Yes or No. When Yes is selected, provide the required PDF evidence. Files are represented by metadata only in this browser and are not uploaded.</div><div class="questionnaire-list">${fields}</div><div class="wizard-footer"><small class="mock-note" data-questionnaire-count>${answered} of ${userQuestions.length} supplier responses completed · Conditional documents: ${questionnaireComplete()?"complete":"incomplete"}</small><button class="button primary" data-questionnaire-submit onclick="window.portalSubmitQuestionnaire()" ${!questionnaireComplete()||locked?"disabled":""}>Submit questionnaire</button></div>`;
+  }
   function renderOnboardingTask(el) {
     const task=onboardingTasks.find(item=>item.id===currentTask);
     if(!task) { page="Supplier Onboarding"; return renderOnboarding(el); }
@@ -292,11 +666,9 @@
     if(task.id==="sourcing-policy") {
       body=renderLearningFlow();
     } else if(task.id==="sustainability-risk") {
-      body=`<div class="notice">Select the level that best describes each topic for your company. These sample responses are stored locally and are not submitted to Northstar.</div><div class="card table-card risk-table"><div class="risk-header"><span>Risk topic</span><span>Your assessment</span></div>${riskTopics.map(([key,label])=>`<div class="risk-row"><strong>${label}</strong><select class="field-control" aria-label="${label}" onchange="window.portalRiskAnswer('${key}',this.value)"><option value="">Select a level</option>${["Low","Medium","High"].map(v=>`<option ${db.onboarding.riskAnswers[key]===v?"selected":""}>${v}</option>`).join("")}</select></div>`).join("")}</div><div class="wizard-footer"><small class="mock-note" data-risk-count>${Object.keys(db.onboarding.riskAnswers).filter(k=>db.onboarding.riskAnswers[k]).length} of ${riskTopics.length} topics assessed</small><button class="button primary" data-risk-submit onclick="window.portalSubmitRisk()" ${Object.keys(db.onboarding.riskAnswers).filter(k=>db.onboarding.riskAnswers[k]).length<riskTopics.length?"disabled":""}>Save assessment</button></div>`;
+      body=`<div class="notice">Demo only: select a risk level for each topic. The supplied requirements call for a system-calculated Inherent Risk result and topic quizzes, but no upstream scoring rules or quiz content were provided.</div><div class="card table-card risk-table"><div class="risk-header"><span>Risk topic</span><span>Risk level · demo</span></div>${riskTopics.map(([key,label])=>`<div class="risk-row"><strong>${label}</strong><select class="field-control" aria-label="${label}" onchange="window.portalRiskAnswer('${key}',this.value)"><option value="">Select a level</option>${["Low","Medium","High"].map(v=>`<option ${db.onboarding.riskAnswers[key]===v?"selected":""}>${v}</option>`).join("")}</select></div>`).join("")}</div><div class="wizard-footer"><small class="mock-note" data-risk-count>${Object.keys(db.onboarding.riskAnswers).filter(k=>db.onboarding.riskAnswers[k]).length} of ${riskTopics.length} topics assessed</small><button class="button primary" data-risk-submit onclick="window.portalSubmitRisk()" ${Object.keys(db.onboarding.riskAnswers).filter(k=>db.onboarding.riskAnswers[k]).length<riskTopics.length?"disabled":""}>Save assessment</button></div>`;
     } else {
-      const options=["Yes","Partially","No","Not applicable"];
-      const answerCount=supplierQuestionnaire.filter(([key])=>options.includes(db.onboarding.questionnaireAnswers[key])).length;
-      body=`<div class="notice">Select the response that best describes your current practice. These fictional pre-screening responses are saved locally and do not represent a pass/fail supplier decision.</div><div class="card table-card risk-table"><div class="risk-header"><span>Supplier practice</span><span>Your response</span></div>${supplierQuestionnaire.map(([key,question])=>`<div class="risk-row"><strong>${escapeHtml(question)}</strong><select class="field-control" aria-label="${escapeHtml(question)}" onchange="window.portalQuestionnaireAnswer('${key}',this.value)" ${done>=task.required?"disabled":""}><option value="">Select a response</option>${options.map(value=>`<option value="${value}" ${db.onboarding.questionnaireAnswers[key]===value?"selected":""}>${value}</option>`).join("")}</select></div>`).join("")}</div><div class="wizard-footer"><small class="mock-note" data-questionnaire-count>${answerCount} of ${supplierQuestionnaire.length} responses completed</small><button class="button primary" data-questionnaire-submit onclick="window.portalSubmitQuestionnaire()" ${answerCount<supplierQuestionnaire.length||done>=task.required?"disabled":""}>Submit questionnaire</button></div>`;
+      body=renderSupplierQuestionnaire(done);
     }
     el.innerHTML=`<div class="breadcrumbs" style="margin-bottom:11px"><button class="text-link" onclick="window.portalNav('Supplier Onboarding')">Supplier Onboarding</button> / <strong>${escapeHtml(task.category)}</strong></div>${heading(task.title,task.description)}<div class="task-detail-layout"><div class="card section-card task-detail-card"><div class="section-title"><div><div class="eyebrow">${escapeHtml(task.category)}</div><h2>${escapeHtml(task.title)}</h2></div>${badge(done>=task.required?"Completed":"In Progress")}</div><div class="task-progress detail-progress"><span>Progress · ${done}/${task.required}</span><div class="progress-track"><div class="progress-fill" style="width:${done/task.required*100}%"></div></div></div>${doneBanner}${body}</div></div>`;
   }
@@ -309,11 +681,13 @@
     const titles=["E-learning video","Consent / Accept document","Questionnaire"];
     const stepHeading=(number,title,complete,available)=>`<div class="learning-module-heading"><div><span class="eyebrow">STEP ${number}/3</span><h3 id="learning-step-title" tabindex="-1">${title}</h3></div>${badge(complete?"Completed":available?"In Progress":"Not Started")}</div>`;
     const policy=learningLessons.map(lesson=>`<h4>${escapeHtml(lesson.title)}</h4><p class="lesson-summary">${escapeHtml(lesson.summary)}</p><ul class="lesson-points">${lesson.points.map(point=>`<li>${escapeHtml(point)}</li>`).join("")}</ul>`).join("");
-    const questions=learningQuestions.map((question,index)=>`<fieldset class="quiz-question" ${locked||result?"disabled":""}><legend>${index+1}. ${escapeHtml(question.text)}</legend><div class="quiz-options">${question.options.map((option,optionIndex)=>`<label class="quiz-option"><input type="radio" name="policy-q${index}" value="${optionIndex}" ${flow.answers[index]===optionIndex?"checked":""} onchange="window.portalLearningAnswer(${index},${optionIndex})"><span>${escapeHtml(option)}</span></label>`).join("")}</div>${result?`<p class="quiz-explanation ${result.answers[index]===question.answer?"correct-answer":"incorrect-answer"}"><strong>${result.answers[index]===question.answer?"Correct.":"Review:"}</strong> ${escapeHtml(question.explanation)}</p>`:""}</fieldset>`).join("");
+    const questions=learningQuestions.map((question,index)=>`<fieldset class="quiz-question" ${locked?"disabled":""}><legend>${index+1}. ${escapeHtml(question.text)}</legend><div class="quiz-options">${question.options.map((option,optionIndex)=>`<label class="quiz-option"><input type="radio" name="policy-q${index}" value="${optionIndex}" ${flow.answers[index]===optionIndex?"checked":""} onchange="window.portalLearningAnswer(${index},${optionIndex})"><span>${escapeHtml(option)}</span></label>`).join("")}</div></fieldset>`).join("");
+    const total=learningQuestions.length, passMark=Math.ceil(total*0.8), allAnswered=learningQuestions.every((question,index)=>Number.isInteger(flow.answers[index]));
+    const summary=result?`<div class="quiz-summary ${result.passed?"passed":"needs-review"}"><div class="quiz-score"><strong>${result.score}/${total}</strong><span>${Math.round(result.score/total*100)}%</span></div><div class="quiz-summary-copy"><h4>${result.passed?"Questionnaire passed":"Not passed"}</h4><p>Pass mark: ${passMark}/${total} (80%)</p></div></div><div class="quiz-breakdown">${learningQuestions.map((question,index)=>{const ok=result.answers[index]===question.answer;return `<div class="quiz-breakdown-row"><span>${index+1}. ${escapeHtml(question.text)}</span><strong class="${ok?"correct-answer":"incorrect-answer"}">${ok?"Correct":"Incorrect"}</strong></div>`;}).join("")}</div>`:"";
     const sections=[
-      `<article class="card learning-module">${stepHeading(1,"E-learning video",flow.videoCompleted,true)}<div class="learning-video-placeholder"><span aria-hidden="true">▶</span><strong>Sustainable Sourcing Policy and Supplier Guiding Principles</strong><p>No training video has been supplied. This is a demo video placeholder, not a real playback record.</p></div><button class="button primary" onclick="window.portalLearningVideo()" ${flow.videoCompleted?"disabled":""}>${flow.videoCompleted?"Video demo completed":"Simulate video completion (demo)"}</button></article>`,
-      `<article class="card learning-module">${stepHeading(2,"Consent / Accept document",flow.consentAccepted,flow.videoCompleted)}<h4>Sustainable Sourcing Policy and Supplier Guiding Principles</h4><details class="policy-document"><summary>Read policy document · Mock version 1.0</summary>${policy}<p class="mock-note">Original prototype policy summary, not an official policy or legal agreement.</p></details><label class="commitment-row"><input id="policy-consent" type="checkbox" ${flow.consentAccepted?"checked":""} ${!flow.videoCompleted||flow.consentAccepted?"disabled":""} onchange="window.portalConsentCheck(this.checked)"><span>I have read and accept the Sustainable Sourcing Policy and Supplier Guiding Principles (mock version 1.0).</span></label><button class="button primary" data-policy-accept onclick="window.portalLearningConsent()" disabled>${flow.consentAccepted?"Document accepted":"Accept document"}</button>${flow.consentAccepted?`<p class="mock-note">Accepted on ${fmtDate(flow.acceptedAt)} · Mock version 1.0</p>`:""}</article>`,
-      `<article class="card learning-module">${stepHeading(3,"Questionnaire",Boolean(result?.passed),!locked)}<p class="lesson-summary">Questions from Sustainable Sourcing Policy and Supplier Guiding Principles.</p><div class="quiz-heading"><h4>Knowledge check · ${learningQuestions.length} questions</h4><span>Pass mark: 6/9</span></div>${questions}${result?`<div class="quiz-result ${result.passed?"passed":"needs-review"}"><strong>${result.passed?"Questionnaire passed":"Not passed yet"} · ${result.score}/9</strong><span>${result.passed?"Your result is saved.":"Review the explanations and try again."}</span></div>`:""}<button class="button primary" onclick="window.${result&&!result.passed?"portalRetryLesson":"portalSubmitLesson"}()" ${locked||result?.passed?"disabled":""}>${result?.passed?"Passed":result?"Try again":"Submit answers"}</button></article>`
+      `<article class="card learning-module">${stepHeading(1,"E-learning video",flow.videoCompleted,true)}<div class="learning-video-placeholder">${learningVideoId?`<iframe class="learning-video-embed" title="Sustainable Sourcing Policy and Supplier Guiding Principles video" src="https://www.youtube-nocookie.com/embed/${encodeURIComponent(learningVideoId)}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen loading="lazy"></iframe>`:`<span aria-hidden="true">▶</span><strong>Sustainable Sourcing Policy and Supplier Guiding Principles</strong><p>Add the course YouTube video ID in app.js to enable the in-page preview.</p>`}</div><button class="button primary" onclick="window.portalLearningVideo()" ${flow.videoCompleted?"disabled":""}>${flow.videoCompleted?"Video demo completed":"Mark video complete (demo)"}</button></article>`,
+      `<article class="card learning-module">${stepHeading(2,"Consent / Accept document",flow.consentAccepted,flow.videoCompleted)}<h4>Sustainable Sourcing Policy and Supplier Guiding Principles</h4><div class="policy-document policy-preview" role="region" aria-label="Sustainable sourcing policy preview">${policy}<p class="mock-note">Original prototype policy summary, not an official policy or legal agreement.</p></div><label class="commitment-row"><input id="policy-consent" type="checkbox" ${flow.consentAccepted?"checked":""} ${!flow.videoCompleted||flow.consentAccepted?"disabled":""} onchange="window.portalConsentCheck(this.checked)"><span>I have read and accept the Sustainable Sourcing Policy and Supplier Guiding Principles (mock version 1.0).</span></label><button class="button primary" data-policy-accept onclick="window.portalLearningConsent()" disabled>${flow.consentAccepted?"Document accepted":"Accept document"}</button>${flow.consentAccepted?`<p class="mock-note">Accepted on ${fmtDate(flow.acceptedAt)} · Mock version 1.0</p>`:""}</article>`,
+      `<article class="card learning-module">${stepHeading(3,"Questionnaire",Boolean(result?.passed),!locked)}${result?summary:`<p class="lesson-summary">Questions from Sustainable Sourcing Policy and Supplier Guiding Principles.</p><div class="quiz-heading"><h4>Knowledge check · ${total} questions</h4><span>Pass mark: ${passMark}/${total} (80%)</span></div>${questions}<button class="button primary" data-quiz-submit onclick="window.portalSubmitLesson()" ${locked||!allAnswered?"disabled":""}>Submit answers</button>`}${result&&!result.passed?`<button class="button primary" onclick="window.portalRetryLesson()">Try again</button>`:""}</article>`
     ];
     return `<div class="notice">Complete one activity at a time, then select Next. Progress and answers are saved only in this browser for this fictional course.</div>
       <nav class="learning-stepper" aria-label="Learning steps">${titles.map((title,index)=>`<button class="learning-step ${index===activeStep?"selected":""}" ${index>availableStep?"disabled":""} ${index===activeStep?'aria-current="step"':""} onclick="window.portalLearningStep(${index})"><span class="learning-step-number">${completed[index]?"✓":index+1}</span><span>${title}</span></button>`).join("")}</nav>
@@ -344,22 +718,24 @@
   }
   function setLearningAnswer(questionIndex,optionIndex) {
     const flow=db.onboarding.learningFlow, question=learningQuestions[questionIndex];
-    if(!flow.consentAccepted||flow.result)return toast("Complete the earlier steps or start a new quiz attempt.");
-    if(!Number.isInteger(questionIndex)||!question||!Number.isInteger(optionIndex)||optionIndex<0||optionIndex>=question.options.length)return toast("Invalid questionnaire answer.");
+    if(!flow.consentAccepted||flow.result)return;
+    if(!Number.isInteger(questionIndex)||!question||!Number.isInteger(optionIndex)||optionIndex<0||optionIndex>=question.options.length)return;
     flow.answers[questionIndex]=optionIndex;saveDb();
+    const submit=document.querySelector("[data-quiz-submit]");
+    if(submit)submit.disabled=!learningQuestions.every((item,index)=>Number.isInteger(flow.answers[index]));
   }
   function submitLesson() {
     const flow=db.onboarding.learningFlow;
-    if(!flow.videoCompleted||!flow.consentAccepted)return toast("Complete the video and accept the document first.");
-    if(flow.result)return toast("Review your result or select Try again.");
-    if(learningQuestions.some((question,index)=>!Number.isInteger(flow.answers[index])||!question.options[flow.answers[index]]))return toast("Answer every question before submitting.");
+    if(!flow.videoCompleted||!flow.consentAccepted||flow.result)return;
+    if(learningQuestions.some((question,index)=>!Number.isInteger(flow.answers[index])||!question.options[flow.answers[index]]))return;
     const score=learningQuestions.reduce((total,question,index)=>total+(flow.answers[index]===question.answer?1:0),0);
-    flow.result={score,passed:score>=6,answers:{...flow.answers}};
-    db.onboarding.tasks["sourcing-policy"]=flow.result.passed?3:2;saveDb();render();toast(flow.result.passed?"Learning completed. Progress: 3/3.":"Review the feedback and try again.");
+    flow.quizVersion=2;
+    flow.result={score,passed:score>=Math.ceil(learningQuestions.length*0.8),answers:{...flow.answers}};
+    db.onboarding.tasks["sourcing-policy"]=flow.result.passed?3:2;saveDb();render();
   }
   function retryLesson() {
     const flow=db.onboarding.learningFlow;
-    if(!flow.result||flow.result.passed)return toast("A retry is only available after an unsuccessful attempt.");
+    if(!flow.result||flow.result.passed)return;
     flow.result=null;flow.answers={};saveDb();render();
   }
   function setRiskAnswer(key,value) {
@@ -379,17 +755,52 @@
   function setQuestionnaireAnswer(key,value) {
     if(!questionnaireAvailable())return toast(taskBlockedMessage("supplier-questionnaire"));
     if(taskCount("supplier-questionnaire"))return toast("The questionnaire has already been submitted.");
-    if(!supplierQuestionnaire.some(([questionKey])=>questionKey===key)||!["","Yes","Partially","No","Not applicable"].includes(value))return;
-    db.onboarding.questionnaireAnswers[key]=value; saveDb();
-    const count=supplierQuestionnaire.filter(([questionKey])=>Boolean(db.onboarding.questionnaireAnswers[questionKey])).length;
-    const counter=document.querySelector("[data-questionnaire-count]"), submit=document.querySelector("[data-questionnaire-submit]");
-    if(counter)counter.textContent=`${count} of ${supplierQuestionnaire.length} responses completed`;
-    if(submit)submit.disabled=count<supplierQuestionnaire.length;
+    const question=supplierQuestionnaire.find(([questionKey])=>questionKey===key);
+    if(!question||question[2]==="system"||!["Yes","No"].includes(value))return;
+    const response=db.onboarding.questionnaireAnswers[key]||{documentType:"",files:[],note:""};
+    response.answer=value;
+    if(value==="No") { response.documentType="";response.files=[]; }
+    db.onboarding.questionnaireAnswers[key]=response;saveDb();render();
+  }
+  function setQuestionnaireDocument(key,value) {
+    if(taskCount("supplier-questionnaire"))return;
+    const question=supplierQuestionnaire.find(([questionKey])=>questionKey===key);
+    if(!question||!Array.isArray(question[2])||!question[2].includes(value))return;
+    const response=db.onboarding.questionnaireAnswers[key];
+    if(!response||response.answer!=="Yes")return;
+    response.documentType=value;saveDb();render();
+  }
+  function setQuestionnaireFiles(key,files) {
+    if(taskCount("supplier-questionnaire"))return;
+    const question=supplierQuestionnaire.find(([questionKey])=>questionKey===key);
+    const response=db.onboarding.questionnaireAnswers[key];
+    if(!question||!response||response.answer!=="Yes")return;
+    const limit=question[3]||1, selected=Array.from(files||[]), accepted=[];
+    for(const file of selected) {
+      const isPdf=file.type==="application/pdf"||file.name.toLowerCase().endsWith(".pdf");
+      if(!isPdf) { toast(`${file.name} is not a PDF file.`);continue; }
+      if(file.size>5*1024*1024) { toast(`${file.name} exceeds the 5 MB limit.`);continue; }
+      accepted.push({name:file.name,size:file.size,type:"application/pdf"});
+    }
+    const remaining=limit-(response.files||[]).length;
+    if(accepted.length>remaining)toast(`This question allows up to ${limit} file${limit===1?"":"s"}.`);
+    response.files=[...(response.files||[]),...accepted.slice(0,Math.max(0,remaining))];saveDb();render();
+  }
+  function removeQuestionnaireFile(key,index) {
+    const response=db.onboarding.questionnaireAnswers[key];
+    if(!response||taskCount("supplier-questionnaire"))return;
+    response.files.splice(index,1);saveDb();render();
+  }
+  function setQuestionnaireNote(key,value) {
+    if(taskCount("supplier-questionnaire"))return;
+    const response=db.onboarding.questionnaireAnswers[key];
+    if(!response||!["Yes","No"].includes(response.answer))return;
+    response.note=String(value).slice(0,5000);saveDb();
   }
   function submitQuestionnaire() {
     if(!questionnaireAvailable())return toast(taskBlockedMessage("supplier-questionnaire"));
     if(taskCount("supplier-questionnaire"))return toast("The questionnaire has already been submitted.");
-    if(supplierQuestionnaire.some(([key])=>!["Yes","Partially","No","Not applicable"].includes(db.onboarding.questionnaireAnswers[key])))return toast("Answer every question before submitting.");
+    if(!questionnaireComplete())return toast("Answer every required question and attach the conditional PDF documents before submitting.");
     db.onboarding.tasks["supplier-questionnaire"]=1; saveDb(); render(); toast(riskAssessmentState()==="required"?"Questionnaire submitted. Risk identified: complete the Sustainability Risk Assessment.":"Questionnaire submitted. No additional risk assessment is required.");
   }
   function filteredRequests() {
@@ -600,7 +1011,7 @@
     if(profileTab==="Products") panel=`<h2>Registered product categories</h2><div class="table-wrap"><table><thead><tr><th>Category</th><th>Reference</th><th>Sample requirement</th><th>Status</th></tr></thead><tbody>${p.products.map(x=>`<tr><td><strong>${escapeHtml(x.name)}</strong></td><td>${escapeHtml(x.code)}</td><td>${needsSample(x.name)?"Sample approval may be required":"Not required"}</td><td>${badge(x.status)}</td></tr>`).join("")}</tbody></table></div>`;
     if(profileTab==="Risk assessment") panel=`<h2>Sustainability risk assessment</h2>${riskAssessmentState()!=="required"?`<div class="table-empty"><div class="empty-icon">◈</div><h3>${riskAssessmentState()==="pending"?"Pending questionnaire":"Assessment not required"}</h3><p>${escapeHtml(riskAssessmentMessage())}</p><button class="button" disabled>Assessment unavailable</button></div>`:taskCount("sustainability-risk")?`<div class="table-wrap"><table><thead><tr><th>Risk area</th><th>Supplier response</th><th>Assessment status</th></tr></thead><tbody>${riskTopics.map(([key,label])=>`<tr><td><strong>${escapeHtml(label)}</strong></td><td>${escapeHtml(db.onboarding.riskAnswers[key]||"Not answered")}</td><td>${badge("Completed")}</td></tr>`).join("")}</tbody></table></div>`:'<div class="table-empty"><div class="empty-icon">◈</div><h3>Assessment not submitted</h3><p>Complete the sustainability risk assessment task to see your saved responses.</p><button class="button primary" onclick="window.portalTask(\'sustainability-risk\')">Start assessment</button></div>'}`;
     el.innerHTML=heading("Company Profile","Your supplier account information is linked to your onboarding record.")+
-      `<div class="card profile-banner"><div class="avatar">AS</div><div><h2>${escapeHtml(p.company)}</h2><p>Supplier ID ${escapeHtml(p.id)} · Portland, Oregon, United States</p></div>${badge("Verified")}</div>
+      `<div class="card profile-banner"><div class="avatar">AS</div><div><h2>${escapeHtml(p.company)}</h2><p>Supplier ID ${escapeHtml(p.id)} · ${escapeHtml(p.site)}</p></div>${badge("Verified")}</div>
       <div class="profile-tabs" role="tablist">${tabs.map(tab=>`<button class="profile-tab ${profileTab===tab?"selected":""}" role="tab" aria-selected="${profileTab===tab}" onclick="window.portalProfileTab('${tab}')">${tab}</button>`).join("")}</div>
       <div class="card detail-section profile-tab-content">${panel}<div class="notice" style="margin:18px 0 0">Profile changes and new records are saved in this browser for demonstration only; they are not submitted for approval.</div></div>`;
   }
@@ -710,7 +1121,7 @@
     if(!window.confirm("Reset all supplier portal changes in this browser and reload the fictional demo data?"))return;
     try { localStorage.removeItem("northstar-supplier-portal-v1"); }
     catch(error) { console.error("Unable to reset saved supplier portal data.",error); toast("Could not clear saved demo data in this browser."); return; }
-    db=structuredClone(initial); filters={search:"",status:"All statuses",category:"All categories",type:"All types",date:"Any date"};form=null;profileEditMode=false;profileEntryMode=null;selectedDocument=null;profileTab="Company information";documentFilter="All";for(const preview of documentPreviews.values())URL.revokeObjectURL(preview);documentPreviews.clear();page="Supplier Onboarding";render();toast("Demo data reset.");
+    db=structuredClone(initial); filters={search:"",status:"All statuses",category:"All categories",type:"All types",date:"Any date"};form=null;profileEditMode=false;profileEntryMode=null;selectedDocument=null;profileTab="Company information";documentFilter="All";for(const preview of documentPreviews.values())URL.revokeObjectURL(preview);documentPreviews.clear();regTouched.clear();regShowAll=false;page="Supplier Onboarding";render();toast("Demo data reset.");
   }
 
   window.portalNav=nav;
@@ -727,6 +1138,10 @@
   window.portalRiskAnswer=setRiskAnswer;
   window.portalSubmitRisk=submitRisk;
   window.portalQuestionnaireAnswer=setQuestionnaireAnswer;
+  window.portalQuestionnaireDocument=setQuestionnaireDocument;
+  window.portalQuestionnaireFiles=setQuestionnaireFiles;
+  window.portalQuestionnaireRemoveFile=removeQuestionnaireFile;
+  window.portalQuestionnaireNote=setQuestionnaireNote;
   window.portalSubmitQuestionnaire=submitQuestionnaire;
   window.portalRequestAction=requestAction;
   window.portalOpen=id=>{selectedId=id;page="Sample Request Details";render();};
@@ -761,5 +1176,20 @@
   window.portalDocInfo=docInfo;
   window.portalDocumentFiles=addDocumentFiles;
   window.portalReset=resetDemo;
+  window.portalRegCocCheck=checked=>{const button=document.getElementById("reg-coc-start");if(button)button.disabled=!checked;};
+  window.portalRegStart=regStart;
+  window.portalRegInput=regInput;
+  window.portalRegSet=regSet;
+  window.portalRegCheck=regCheck;
+  window.portalRegBlur=regBlur;
+  window.portalRegDatePick=regDatePick;
+  window.portalRegDateNative=regDateNative;
+  window.portalRegFiles=regAddFiles;
+  window.portalRegRemoveFile=regRemoveFile;
+  window.portalRegStep=regStep;
+  window.portalRegGo=regGo;
+  window.portalRegAddCat=regAddCategory;
+  window.portalRegRemoveCat=regRemoveCategory;
+  window.portalRegSubmit=regSubmit;
   render();
 })();
