@@ -4,13 +4,31 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 import { routes } from "@/lib/routes";
+import { BuyerInterestBadge } from "@/components/BuyerInterest";
 import { registrationDone } from "@/lib/onboarding";
+import { useI18n } from "@/lib/i18n";
 import { usePortal } from "@/lib/store";
 
+const ICONS: Record<string, ReactNode> = {
+  onboarding: (<><rect x="8" y="2" width="8" height="4" rx="1" /><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" /><path d="m9 14 2 2 4-4" /></>),
+  samples: (<><path d="m7.5 4.27 9 5.15" /><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z" /><path d="m3.3 7 8.7 5 8.7-5" /><path d="M12 22V12" /></>),
+  profile: (<><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z" /><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2" /><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2" /><path d="M10 6h4M10 10h4M10 14h4M10 18h4" /></>),
+  srm: (<><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></>),
+};
+
+function NavIcon({ name }: { name: string }) {
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      {ICONS[name]}
+    </svg>
+  );
+}
+
 const NAV = [
-  { label: "Supplier Onboarding", icon: "✓", href: routes.onboarding, match: "/onboarding" },
-  { label: "Sample Request", icon: "◫", href: routes.samples, match: "/sample-requests" },
-  { label: "Company Profile", icon: "⌂", href: routes.profile, match: "/profile" },
+  { label: "Supplier Onboarding", icon: "onboarding", href: routes.onboarding, match: "/onboarding" },
+  { label: "Sample Request", icon: "samples", href: routes.samples, match: "/sample-requests" },
+  { label: "Company Profile", icon: "profile", href: routes.profile, match: "/profile" },
+  { label: "Supplier Relationship Management", icon: "srm", href: routes.srm, match: "/srm" },
 ];
 
 function pageName(path: string) {
@@ -23,6 +41,7 @@ function pageName(path: string) {
   if (path.startsWith("/sample-requests/")) return "Sample Request Details";
   if (path.startsWith("/sample-requests")) return "Sample Request";
   if (path.startsWith("/profile")) return "Company Profile";
+  if (path.startsWith("/srm")) return "Supplier Relationship Management";
   if (path.startsWith("/notifications")) return "Notifications";
   if (path.startsWith("/help")) return "Help & Support";
   return "Supplier Onboarding";
@@ -30,6 +49,7 @@ function pageName(path: string) {
 
 export default function PortalShell({ children }: { children: ReactNode }) {
   const { db, toasts, resetDemo } = usePortal();
+  const { t, lang, setLang } = useI18n();
   const pathname = usePathname();
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -56,27 +76,28 @@ export default function PortalShell({ children }: { children: ReactNode }) {
         <div className="brand">
           <div className="brand-mark">N</div>
           <div className="brand-name">
-            northstar<small>Supplier portal</small>
+            northstar<small>{t("Supplier portal")}</small>
           </div>
         </div>
         <div className="company-mini">
-          <span>SUPPLIER ACCOUNT</span>
+          <span>{t("SUPPLIER ACCOUNT")}</span>
           <strong>{db.profile.company}</strong>
+          <BuyerInterestBadge />
         </div>
-        <div className="nav-label">Workspace</div>
-        <nav className="nav-list" aria-label="Main navigation">
+        <div className="nav-label">{t("Workspace")}</div>
+        <nav className="nav-list" aria-label={t("Main navigation")}>
           {NAV.map((item) => {
             const locked = !registered && item.href !== routes.onboarding;
             const active = pathname.startsWith(item.match);
             const body = (
               <>
-                <span className="nav-icon">{item.icon}</span>
-                {item.label}
+                <span className="nav-icon"><NavIcon name={item.icon} /></span>
+                {t(item.label)}
                 {item.label === "Sample Request" && actionCount > 0 ? <span className="nav-count">{actionCount}</span> : null}
               </>
             );
             return locked ? (
-              <button key={item.label} className="nav-item" disabled title="ต้องลงทะเบียนผู้ขายให้สำเร็จก่อน">
+              <button key={item.label} className="nav-item" disabled title={t("Complete supplier registration first.")}>
                 {body}
               </button>
             ) : (
@@ -88,37 +109,44 @@ export default function PortalShell({ children }: { children: ReactNode }) {
         </nav>
         <div className="sidebar-bottom">
           <div className="help-card">
-            <strong>Need a hand?</strong>
-            <p>Our supplier support team is here to help with your onboarding.</p>
-            <button onClick={() => router.push(routes.help)}>Contact support →</button>
+            <strong>{t("Need a hand?")}</strong>
+            <p>{t("Our supplier support team is here to help with your onboarding.")}</p>
+            <button onClick={() => router.push(routes.help)}>{t("Contact support →")}</button>
           </div>
           <button
             className="text-link"
             style={{ padding: "0 7px 8px" }}
-            onClick={() => {
-              if (resetDemo()) router.push(routes.onboarding);
+            onClick={async () => {
+              if (await resetDemo()) router.push(routes.onboarding);
             }}
           >
-            Reset fictional demo data
+            {t("Reset fictional demo data")}
           </button>
           <div className="user-mini">
             <div className="avatar">MC</div>
             <div>
               <strong>{db.profile.contact}</strong>
-              <small>Supplier administrator</small>
+              <small>{t("Supplier administrator")}</small>
             </div>
           </div>
         </div>
       </aside>
       <main className="main">
         <header className="topbar">
-          <button className="mobile-menu" aria-label="Open navigation" onClick={() => setMenuOpen(true)}>
+          <button className="mobile-menu" aria-label={t("Open navigation")} onClick={() => setMenuOpen(true)}>
             ☰
           </button>
           <div className="breadcrumbs">
-            Supplier Portal <span> / </span> <strong>{pageName(pathname)}</strong>
+            {t("Supplier Portal")} <span> / </span> <strong>{t(pageName(pathname))}</strong>
           </div>
           <div className="top-actions">
+            <div className="lang-switch" role="group" aria-label={t("Language")}>
+              {(["en", "th"] as const).map((code) => (
+                <button key={code} className={lang === code ? "selected" : ""} aria-pressed={lang === code} onClick={() => setLang(code)}>
+                  {code.toUpperCase()}
+                </button>
+              ))}
+            </div>
             <button className="profile-button" onClick={() => router.push(routes.profile)}>
               <span className="avatar">MC</span>
               <span>{db.profile.contact}</span>⌄
@@ -130,9 +158,9 @@ export default function PortalShell({ children }: { children: ReactNode }) {
         </div>
       </main>
       <div className="toast-region" aria-live="polite">
-        {toasts.map((t) => (
-          <div className="toast" key={t.id}>
-            {t.text}
+        {toasts.map((item) => (
+          <div className="toast" key={item.id}>
+            {t(item.text)}
           </div>
         ))}
       </div>

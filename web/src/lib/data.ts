@@ -2,8 +2,19 @@
 import type { Db, Lesson, Question, QuestionnaireItem, RequestRec } from "./types";
 import { CATEGORIES, policyFields } from "./policy";
 import { buyerRequestOf } from "./sample-request-flow";
+import { initialSrm } from "./srm";
 
 export const learningVideoId = "";
+
+export interface ThaiLaborItem { id: number; title: string; kind: "video" | "pdf"; videoId?: string; fileName?: string; pages?: number }
+// Add YouTube video IDs here to enable the in-page video previews. PDFs use a mock viewer.
+export const thaiLaborItems: ThaiLaborItem[] = [
+  { id: 1, title: "1. VDO มาตรฐานแรงงานไทย นายจ้างอยู่ได้ ลูกจ้างอยู่ได้", kind: "video", videoId: "" },
+  { id: 2, title: "2. กฎหมายแรงงานที่ควรรู้มีอะไรบ้าง", kind: "pdf", fileName: "thai-labour-law-essentials.pdf", pages: 6 },
+  { id: 3, title: "3. VDO มรท.8001-2563 ระดับพื้นฐาน", kind: "video", videoId: "" },
+  { id: 4, title: "4. คู่มือข้อกำหนดมาตรฐานแรงงานไทย (มรท.8001-2563)", kind: "pdf", fileName: "thai-labour-standard-8001-2563-manual.pdf", pages: 8 },
+  { id: 5, title: "5. ข้อกำหนด 4.2.5 ผู้ส่งมอบหรือผู้รับเหมาช่วง", kind: "pdf", fileName: "requirement-4-2-5-suppliers-subcontractors.pdf", pages: 4 },
+];
 export const COMPANY = { name: "Asteron Industrial Supply", id: "SUP-20481", contact: "Maya Chen", email: "maya.chen@asteron.example", phone: "+1 (555) 014-7782" };
 
 const initialRequests: RequestRec[] = [
@@ -90,6 +101,7 @@ export const initial: Db = {
       buyerRequest: { ...buyerRequestOf(request), reviewMode: request.type === "Both" ? "Digital" : buyerRequestOf(request).reviewMode },
       history: [["Buyer requested sample", `${request.created}T09:00:00`], ...request.history.filter(([action]) => action !== "Draft Created")],
     })),
+    srm: initialSrm(),
     registration: { status:"Draft", cocAccepted:false, step:1, data:{}, categories:[{main:"",sub:"",material:"",details:"",files:[]}] },
     profile: {
       company: COMPANY.name, id: COMPANY.id, registration: "US-OR-927461", contact: COMPANY.contact,
@@ -106,14 +118,18 @@ export const initial: Db = {
       eLearning: {status:"Completed",updated:"2026-10-04"},
       selfRegistration: {status:"Not Started",updated:""},
       procurementReview: {status:"Pending",updated:""},
-      tasks: {"sourcing-policy":0,"sustainability-risk":0,"supplier-questionnaire":0},
+      tasks: {"sourcing-policy":0,"thai-labor-standard":0,"thai-labor-commitment":0,"thai-labor-assessment":0,"sustainability-risk":0,"supplier-questionnaire":0},
       learningQuizAnswers: {},
       learningQuizResults: {},
       learningFlow: {videoCompleted:false,consentAccepted:false,answers:{},result:null,quizVersion:2},
+      thaiLabor: {accepted:{}},
+      thaiCommitment: {accepted:false,method:"",files:[]},
+      thaiAssessment: {total:"",male:"",female:"",certified:"",certFiles:[],otherStandards:"",answers:{},notes:""},
       riskAnswers: {},
       questionnaireAnswers: {},
       announcement: {status:"Not Started"},
-      evaluation: {status:"Pending"}
+      evaluation: {status:"Pending"},
+      buyerInterest: {status:"None"}
     },
     documents: [
       {name:"Certificate of Incorporation",type:"Company Registration",related:"Asteron Industrial Supply",issue:"2022-03-14",expiry:"—",status:"Verified",group:"Registration"},

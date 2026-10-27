@@ -2,6 +2,7 @@
 
 import { createContext, useCallback, useContext, useRef, useState, useSyncExternalStore, type Dispatch, type ReactNode, type SetStateAction } from "react";
 import { createInitialDb } from "./data";
+import { useConfirm } from "@/components/ConfirmDialog";
 import { clearDb, loadDb, saveDb } from "./db";
 import { clearFilePreviews } from "./docs";
 import type { Db } from "./types";
@@ -25,7 +26,7 @@ interface PortalContextValue {
   toast: (message: string) => void;
   toasts: ToastItem[];
   /** Confirms, wipes saved data and restores the seeded scenario. Returns true when reset. */
-  resetDemo: () => boolean;
+  resetDemo: () => Promise<boolean>;
   wizard: WizardState;
   setWizard: Dispatch<SetStateAction<WizardState>>;
 }
@@ -54,6 +55,7 @@ export function PortalProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const [wizard, setWizard] = useState<WizardState>({ form: null, step: 0 });
   const toastId = useRef(0);
+  const confirm = useConfirm();
 
   const toast = useCallback((message: string) => {
     const id = ++toastId.current;
@@ -71,8 +73,9 @@ export function PortalProvider({ children }: { children: ReactNode }) {
     [toast],
   );
 
-  const resetDemo = useCallback(() => {
-    if (!window.confirm("Reset all supplier portal changes in this browser and reload the fictional demo data?")) return false;
+  const resetDemo = useCallback(async () => {
+    const ok = await confirm({ title: "Reset demo data", message: "Reset all supplier portal changes in this browser and reload the fictional demo data?", confirmLabel: "Reset", tone: "danger" });
+    if (!ok) return false;
     if (!clearDb()) {
       toast("Could not clear saved demo data in this browser.");
       return false;
@@ -82,7 +85,7 @@ export function PortalProvider({ children }: { children: ReactNode }) {
     clearFilePreviews();
     toast("Demo data reset.");
     return true;
-  }, [toast]);
+  }, [toast, confirm]);
 
   if (!db) return null;
   return (

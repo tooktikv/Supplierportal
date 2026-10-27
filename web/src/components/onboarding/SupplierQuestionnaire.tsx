@@ -1,8 +1,12 @@
 "use client";
 
 import type { ChangeEvent } from "react";
+import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui";
+import DemoFill from "@/components/DemoFill";
+import { Footer, Input, Radios, Section } from "@/components/srm/fields";
 import { supplierQuestionnaire } from "@/lib/data";
+import { fillDemoQuestionnaire } from "@/lib/demo";
 import { pushDocument, todayIso, trackFile } from "@/lib/docs";
 import {
   questionnaireAvailable,
@@ -11,13 +15,16 @@ import {
   taskBlockedMessage,
   taskCount,
 } from "@/lib/onboarding";
+import { routes } from "@/lib/routes";
 import { usePortal } from "@/lib/store";
 import type { FileMeta } from "@/lib/types";
 
 const MAX_PDF_BYTES = 5 * 1024 * 1024;
+const stripNumber = (question: string) => question.replace(/^\d+\.\s*/, "");
 
 export default function SupplierQuestionnaire({ done }: { done: number }) {
   const { db, mutate, toast } = usePortal();
+  const router = useRouter();
   const answers = db.onboarding.questionnaireAnswers;
   const userQuestions = supplierQuestionnaire.filter(([, , type]) => type !== "system");
   const answered = userQuestions.filter(([key]) => ["Yes", "No"].includes(answers[key]?.answer)).length;
@@ -116,103 +123,96 @@ export default function SupplierQuestionnaire({ done }: { done: number }) {
         ? "Questionnaire submitted. Risk identified: complete the Sustainability Risk Assessment."
         : "Questionnaire submitted. No additional risk assessment is required.",
     );
+    router.push(routes.onboarding);
+  };
+
+  /** A question is done when it is answered and, for Yes, its documents are in place. */
+  const questionDone = (key: string, documents: unknown, limit: number) => {
+    const response = answers[key];
+    if (!response || !["Yes", "No"].includes(response.answer)) return false;
+    if (response.answer === "No") return true;
+    const files: FileMeta[] = response.files || [];
+    return (!Array.isArray(documents) || Boolean(response.documentType)) && files.length > 0 && files.length <= limit;
   };
 
   return (
-    <>
-      <div className="notice">
-        Answer Yes or No. When Yes is selected, provide the required PDF evidence. Files are represented by metadata only in this browser and are not uploaded.
+    <div className="reg-main">
+      {!locked && <DemoFill onFill={() => mutate((d) => fillDemoQuestionnaire(d))} secondary={{ label: "Fill with a risk (one No answer)", onFill: () => mutate((d) => fillDemoQuestionnaire(d, true)) }} />}
+      <div className="card section-card qn-summary">
+        <div className="qn-summary-top">
+          <div>
+            <h2>{answered} / {userQuestions.length} answered</h2>
+            <p className="helper">Answer Yes or No. When Yes is selected, provide the required PDF evidence. Files are represented by metadata only in this browser and are not uploaded.</p>
+          </div>
+        </div>
+        <div className="progress-track"><div className="progress-fill" style={{ width: `${(answered / userQuestions.length) * 100}%` }} /></div>
       </div>
-      <div className="questionnaire-list">
-        {supplierQuestionnaire.map(([key, question, documents, maxFiles]) => {
-          if (documents === "system") {
-            const value = questionnaireSystemAnswer(db, key);
-            return (
-              <article className="questionnaire-item questionnaire-generated" key={key}>
-                <strong>{question}</strong>
-                <span>
-                  <Badge status={value || "Pending"} />
-                </span>
-                <small>System generated · not editable</small>
-              </article>
-            );
-          }
-          const response = answers[key] || { answer: "", documentType: "", files: [], note: "" };
-          const conditional = response.answer === "Yes";
-          const limit = maxFiles || 1;
-          const files: FileMeta[] = response.files || [];
-          const note: string = response.note || "";
+
+      {supplierQuestionnaire.map(([key, question, documents, maxFiles], index) => {
+        const title = stripNumber(question);
+        if (documents === "system") {
+          const value = questionnaireSystemAnswer(db, key);
           return (
-            <article className="questionnaire-item" key={key}>
-              <div className="questionnaire-question">
-                <strong>{question}</strong>
-                <span className="required">*</span>
-              </div>
-              <div className="questionnaire-answer" role="radiogroup" aria-label={question}>
-                {(["Yes", "No"] as const).map((value) => (
-                  <label className="questionnaire-choice" key={value}>
-                    <input type="radio" name={`onboarding-${key}`} value={value} checked={response.answer === value} onChange={() => setAnswer(key, value)} disabled={locked} />
-                    <span>{value}</span>
-                  </label>
-                ))}
-              </div>
-              {conditional && (
-                <div className="questionnaire-conditional">
-                  {Array.isArray(documents) && (
-                    <label className="form-field">
-                      Document type{" "}
-                      <select className="field-control" value={response.documentType || ""} onChange={(e) => setDocumentType(key, e.target.value)} disabled={locked}>
-                        <option value="">Select a document type</option>
-                        {documents.map((option) => (
-                          <option key={option} value={option}>
-                            {option}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                  )}
-                  <label className="form-field">
-                    Supporting document <span className="required">*</span>
-                    <span className="helper">
-                      PDF only · maximum 5 MB per file · up to {limit} file{limit === 1 ? "" : "s"}
-                    </span>
-                    <input type="file" accept=".pdf,application/pdf" multiple={limit > 1} onChange={(e) => addFiles(key, e)} disabled={locked} />
-                  </label>
-                  <div className="file-list">
-                    {files.map((file, index) => (
-                      <div className="file-row" key={file.uid || `${file.name}-${index}`}>
-                        <span>
-                          {file.name} <small>({((file.size || 0) / 1024).toFixed(0)} KB)</small>
-                        </span>
-                        <label className="file-expiry">
-                          Expiry date
-                          <input type="date" min={todayIso()} value={file.expiry || ""} disabled={locked} onChange={(e) => setExpiry(key, index, e.target.value)} />
-                        </label>
-                        <button type="button" aria-label={`Remove ${file.name}`} onClick={() => removeFile(key, index)} disabled={locked}>
-                          Remove
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-              <label className="form-field questionnaire-note">
-                หมายเหตุ
-                <textarea className="field-control" maxLength={5000} rows={3} value={note} onChange={(e) => setNote(key, e.target.value)} disabled={locked} />
-                <small>{note.length}/5000 characters</small>
-              </label>
-            </article>
+            <Section key={key} num={index + 1} title={title} hint="System generated · not editable" extra={<Badge status={value || "Pending"} />}>
+              {null}
+            </Section>
           );
-        })}
-      </div>
-      <div className="wizard-footer">
-        <small className="mock-note">
-          {answered} of {userQuestions.length} supplier responses completed · Conditional documents: {complete ? "complete" : "incomplete"}
-        </small>
-        <button className="button primary" onClick={submit} disabled={!complete || locked}>
-          Submit questionnaire
-        </button>
-      </div>
-    </>
+        }
+        const response = answers[key] || { answer: "", documentType: "", files: [], note: "" };
+        const limit = maxFiles || 1;
+        const files: FileMeta[] = response.files || [];
+        const note: string = response.note || "";
+        const ok = questionDone(key, documents, limit);
+        return (
+          <Section key={key} num={index + 1} title={title} extra={<Badge status={ok ? "Completed" : "Pending"} />}>
+            <Radios name={`qn-${key}`} label="Your answer" required options={["Yes", "No"] as const} value={response.answer || ""} disabled={locked} onChange={(value) => setAnswer(key, value)} />
+            {response.answer === "Yes" && Array.isArray(documents) && (
+              <Input name={`qn-${key}-doctype`} label="Document type" type="select" options={documents} value={response.documentType || ""} placeholder="Select a document type" required disabled={locked} onChange={(value) => setDocumentType(key, value)} />
+            )}
+            {response.answer === "Yes" && (
+              <div className="form-field reg-field reg-s4">
+                <div className={`doc-card ${files.length ? "done" : ""}`}>
+                  <div className="doc-card-head">
+                    <span className="doc-icon">▤</span>
+                    <div>
+                      <strong>Supporting document <span className="required">*</span></strong>
+                      <small>PDF only · maximum 5 MB per file · up to {limit} file{limit === 1 ? "" : "s"}</small>
+                    </div>
+                    <span className="doc-state">{files.length ? `✓ Uploaded ${files.length}/${limit}` : "Not uploaded"}</span>
+                  </div>
+                  <label className={`doc-drop ${files.length >= limit || locked ? "full" : ""}`}>
+                    <input type="file" accept=".pdf,application/pdf" multiple={limit > 1} aria-label="Supporting document" onChange={(e) => addFiles(key, e)} disabled={locked || files.length >= limit} />
+                    <span className="doc-drop-icon">↑</span>
+                    <span><b>{files.length >= limit ? `Maximum ${limit} file${limit === 1 ? "" : "s"} uploaded` : <>Drag a file here or <u>choose a file</u></>}</b></span>
+                  </label>
+                  {files.length > 0 && (
+                    <div className="file-list">
+                      {files.map((file, fileIndex) => (
+                        <div className="file-row" key={file.uid || `${file.name}-${fileIndex}`}>
+                          <span className="file-ico">PDF</span>
+                          <span className="file-name">{file.name}<small>{((file.size || 0) / 1024).toFixed(0)} KB</small></span>
+                          <button type="button" aria-label={`Remove ${file.name}`} onClick={() => removeFile(key, fileIndex)} disabled={locked}>Remove</button>
+                          <label className="file-expiry">
+                            Expiry date
+                            <input type="date" min={todayIso()} value={file.expiry || ""} disabled={locked} onChange={(e) => setExpiry(key, fileIndex, e.target.value)} />
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+            {response.answer && (
+              <Input name={`qn-${key}-note`} label="Note" type="textarea" value={note} hint={`Optional · ${note.length}/5000 characters`} disabled={locked} onChange={(value) => setNote(key, value)} />
+            )}
+          </Section>
+        );
+      })}
+
+      <Footer note={`${answered} of ${userQuestions.length} supplier responses completed · Conditional documents: ${complete ? "complete" : "incomplete"}`}>
+        <button className="button primary" onClick={submit} disabled={!complete || locked}>Submit questionnaire</button>
+      </Footer>
+    </div>
   );
 }

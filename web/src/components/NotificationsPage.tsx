@@ -39,8 +39,8 @@ export default function NotificationsPage() {
                   </small>
                 </div>
                 <Badge status={r.status} />
-                <button className="text-link" onClick={() => requestAction(r.id)}>
-                  View →
+                <button className="button small" onClick={() => requestAction(r.id)}>
+                  View
                 </button>
               </div>
             ))

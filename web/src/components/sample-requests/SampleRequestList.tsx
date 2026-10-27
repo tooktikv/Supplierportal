@@ -5,6 +5,7 @@ import { Badge, PageHeading } from "@/components/ui";
 import { fmtDate } from "@/lib/docs";
 import { buyerRequestOf, inSampleBucket, SAMPLE_BUCKETS, type SampleBucket } from "@/lib/sample-request-flow";
 import { usePortal } from "@/lib/store";
+import { useI18n } from "@/lib/i18n";
 import { useSampleActions } from "./useSampleActions";
 
 type SortKey = "id" | "created" | "updated";
@@ -20,8 +21,11 @@ const actionLabel = (status: string) =>
           ? "View Result"
           : "View Details";
 
+const needsAction = (status: string) => ["Awaiting Submission", "Draft", "Action Required", "Resubmission Required"].includes(status);
+
 export default function SampleRequestList() {
   const { db } = usePortal();
+  const { t } = useI18n();
   const { requestAction } = useSampleActions();
   const [bucket, setBucket] = useState<SampleBucket>("All");
   const [sort, setSort] = useState<{ key: SortKey; direction: "asc" | "desc" }>({ key: "created", direction: "desc" });
@@ -39,12 +43,12 @@ export default function SampleRequestList() {
   return (
     <>
       <PageHeading
-        title="Sample Request"
-        desc="Sample requests from Buyer and your sample submissions."
+        title={t("Sample Request")}
+        desc={t("Sample requests from Buyer and your sample submissions.")}
       />
-      <div className="document-tabs" role="tablist" aria-label="Sample request status">
+      <div className="document-tabs" role="tablist" aria-label={t("Sample request status")}>
         {SAMPLE_BUCKETS.map((tab) => <button key={tab} className={`document-tab ${bucket === tab ? "selected" : ""}`} role="tab" aria-selected={bucket === tab} onClick={() => setBucket(tab)}>
-          {tab}<span>{db.requests.filter((request) => inSampleBucket(request, tab)).length}</span>
+          {t(tab)}<span>{db.requests.filter((request) => inSampleBucket(request, tab)).length}</span>
         </button>)}
       </div>
       <div className="card table-card">
@@ -54,20 +58,20 @@ export default function SampleRequestList() {
               <tr>
                 <th>
                   <button className="sort-button" onClick={() => toggleSort("id")}>
-                    Request ID ↕
+                    {t("Request ID")} ↕
                   </button>
                 </th>
-                <th>Product / Sample</th>
-                <th>Buyer</th>
-                <th>Buyer review</th>
+                <th>{t("Product / Sample")}</th>
+                <th>{t("Buyer")}</th>
+                <th>{t("Buyer review")}</th>
                 <th>
                   <button className="sort-button" onClick={() => toggleSort("created")}>
-                    Requested on ↕
+                    {t("Requested on")} ↕
                   </button>
                 </th>
-                <th>Response due</th>
-                <th>Status</th>
-                <th>Actions</th>
+                <th>{t("Response due")}</th>
+                <th>{t("Status")}</th>
+                <th>{t("Actions")}</th>
               </tr>
             </thead>
             <tbody>
@@ -78,19 +82,19 @@ export default function SampleRequestList() {
                   </td>
                   <td>
                     <strong>{r.name}</strong>
-                    <small>{r.code || "No product code"}</small>
-                    <small>{r.category}</small>
+                    <small>{r.code || t("No product code")}</small>
+                    <small>{t(r.category)}</small>
                   </td>
                   <td>{buyerRequestOf(r).buyer}</td>
-                  <td>{buyerRequestOf(r).reviewMode === "Onsite" ? "Onsite review" : "Digital documents"}</td>
+                  <td>{buyerRequestOf(r).reviewMode === "Onsite" ? t("Onsite review") : t("Digital documents")}</td>
                   <td>{fmtDate(buyerRequestOf(r).requestedAt)}</td>
                   <td>{fmtDate(buyerRequestOf(r).dueDate)}</td>
                   <td>
                     <Badge status={r.status} />
                   </td>
                   <td>
-                    <button className="text-link" onClick={() => requestAction(r.id)}>
-                      {actionLabel(r.status)} →
+                    <button className={`button small ${needsAction(r.status) ? "primary" : ""}`} onClick={() => requestAction(r.id)}>
+                      {t(actionLabel(r.status))}
                     </button>
                   </td>
                 </tr>
@@ -100,11 +104,11 @@ export default function SampleRequestList() {
           {rows.length === 0 ? (
             <div className="table-empty">
               <div className="empty-icon">◫</div>
-              <h3>{db.requests.length ? "No matching sample requests" : "No sample requests yet"}</h3>
-              <p>{db.requests.length ? "There are no requests in this status." : "No sample requests have been received from Buyer."}</p>
+              <h3>{db.requests.length ? t("No matching sample requests") : t("No sample requests yet")}</h3>
+              <p>{db.requests.length ? t("There are no requests in this status.") : t("No sample requests have been received from Buyer.")}</p>
               {db.requests.length ? (
                 <button className="button" onClick={() => setBucket("All")}>
-                  View all requests
+                  {t("View all requests")}
                 </button>
               ) : null}
             </div>
@@ -112,9 +116,9 @@ export default function SampleRequestList() {
         </div>
         <div className="table-footer">
           <span>
-            Showing {rows.length} of {db.requests.length} requests
+            {t("Showing {n} of {total} requests", { n: rows.length, total: db.requests.length })}
           </span>
-          <span>Mock supplier data · saved in this browser</span>
+          <span>{t("Mock supplier data · saved in this browser")}</span>
         </div>
       </div>
     </>

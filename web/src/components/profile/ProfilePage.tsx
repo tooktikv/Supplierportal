@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import SiteModal from "@/components/SiteModal";
+import { BuyerInterestBadge } from "@/components/BuyerInterest";
 import { Badge, PageHeading } from "@/components/ui";
 import { usePortal } from "@/lib/store";
 import CompanyInfoTab from "./CompanyInfoTab";
@@ -43,6 +44,7 @@ export default function ProfilePage() {
             Supplier ID {p.id} · {p.site}
           </p>
         </div>
+        <BuyerInterestBadge />
         <Badge status="Verified" />
       </div>
       <div className="profile-tabs" role="tablist">

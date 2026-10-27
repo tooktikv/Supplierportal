@@ -75,12 +75,12 @@ export default function DocumentsPanel({ filter, onFilter, onOpen }: Props) {
                   </td>
                   <td>
                     {count ? (
-                      <button className="text-link" onClick={() => onOpen({ doc: i, v: count - 1, upload: null })}>
+                      <button className="button small" onClick={() => onOpen({ doc: i, v: count - 1, upload: null })}>
                         View
                       </button>
                     ) : (
                       <button
-                        className="text-link"
+                        className="button small primary"
                         onClick={() => onOpen({ doc: i, v: 0, upload: { name: d.name, type: d.type, fixed: true } })}
                       >
                         Upload

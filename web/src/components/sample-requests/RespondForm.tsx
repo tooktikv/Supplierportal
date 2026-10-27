@@ -7,6 +7,7 @@ import { addRequestDocuments, fmtDate } from "@/lib/docs";
 import { isPhysical, transition } from "@/lib/policy";
 import { routes } from "@/lib/routes";
 import { usePortal } from "@/lib/store";
+import { useConfirm } from "@/components/ConfirmDialog";
 import type { FileMeta } from "@/lib/types";
 import FormField from "./FormField";
 import { RESPONSE_STATUSES } from "./sample-utils";
@@ -17,6 +18,7 @@ const stripFile = ({ name, size, type, expiry }: FileMeta): FileMeta => ({ name,
 export default function RespondForm({ id }: { id: string }) {
   const { db, mutate, toast } = usePortal();
   const router = useRouter();
+  const confirm = useConfirm();
   const [comments, setComments] = useState("");
   const [commentError, setCommentError] = useState(false);
   const [files, setFiles] = useState<FileMeta[]>([]);
@@ -33,14 +35,14 @@ export default function RespondForm({ id }: { id: string }) {
   if (!r || !available) return null;
   const resubmit = r.status === "Resubmission Required";
 
-  const submitResponse = () => {
+  const submitResponse = async () => {
     const text = comments.trim();
     if (!text) {
       setCommentError(true);
       toast("Add a response comment before submitting.");
       return;
     }
-    if (!window.confirm("Submit this response to the internal review team?")) return;
+    if (!(await confirm({ message: "Submit this response to the internal review team?", confirmLabel: "Submit" }))) return;
     const updatedQuantity = quantity ?? r.quantity ?? "";
     const updatedDelivery = delivery ?? r.instructions ?? "";
     submitted.current = true;

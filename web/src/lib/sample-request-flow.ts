@@ -109,13 +109,11 @@ export function sampleSubmissionErrors(request: RequestRec, submission: SampleSu
   return errors;
 }
 
-export const SAMPLE_BUCKETS = ["All", "To submit", "Drafts", "Action required", "In progress", "Completed"] as const;
+export const SAMPLE_BUCKETS = ["All", "Action required", "Under review", "Completed"] as const;
 export type SampleBucket = (typeof SAMPLE_BUCKETS)[number];
 export function inSampleBucket(request: RequestRec, bucket: SampleBucket) {
   if (bucket === "All") return true;
-  if (bucket === "To submit") return request.status === "Awaiting Submission";
-  if (bucket === "Drafts") return request.status === "Draft";
-  if (bucket === "Action required") return ["Action Required", "Resubmission Required"].includes(request.status);
+  if (bucket === "Action required") return canSubmitSample(request);
   if (bucket === "Completed") return ["Approved", "Rejected", "Cancelled"].includes(request.status);
   return ["Submitted", "Under Review", "Awaiting Sample", "Sample Received", "Under Evaluation"].includes(request.status);
 }

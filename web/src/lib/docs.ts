@@ -1,14 +1,16 @@
 /* eslint-disable @typescript-eslint/no-explicit-any -- records are JSON-like, as in the mock-up */
 import type { Db, DocRecord, DocVersion, FileMeta, RequestRec } from "./types";
+import { getLang } from "./i18n";
 
 export const todayIso = () => new Date().toISOString().slice(0, 10);
 
+const dateFormats = {
+  en: new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric" }),
+  th: new Intl.DateTimeFormat("th-TH-u-ca-gregory", { month: "short", day: "numeric", year: "numeric" }),
+};
+
 export const fmtDate = (value?: string) =>
-  value
-    ? new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric" }).format(
-        new Date(value.length === 10 ? `${value}T12:00:00` : value),
-      )
-    : "—";
+  value ? dateFormats[getLang()].format(new Date(value.length === 10 ? `${value}T12:00:00` : value)) : "—";
 
 export const DOC_SOURCES: Record<string, string> = {
   Registration: "Supplier registration",

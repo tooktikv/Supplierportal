@@ -8,6 +8,7 @@ export const routes = {
   submitSample: (id: string) => `/sample-requests/${id}/submit`,
   respond: (id: string) => `/sample-requests/${id}/respond`,
   profile: "/profile",
+  srm: "/srm",
   notifications: "/notifications",
   help: "/help",
 } as const;

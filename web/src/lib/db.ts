@@ -3,6 +3,7 @@ import { createInitialDb, initial } from "./data";
 import { policyFields } from "./policy";
 import type { Db } from "./types";
 import { buyerRequestOf } from "./sample-request-flow";
+import { normalizeScope3 } from "./srm";
 
 export const DB_KEY = "northstar-supplier-portal-v1";
 
@@ -24,6 +25,16 @@ export function loadDb(): Db {
     parsed.onboarding.learningQuizAnswers = parsed.onboarding.learningQuizAnswers || {};
     parsed.onboarding.learningQuizResults = parsed.onboarding.learningQuizResults || {};
     parsed.onboarding.learningFlow = parsed.onboarding.learningFlow || clone(initial.onboarding.learningFlow);
+    parsed.onboarding.thaiLabor = parsed.onboarding.thaiLabor || clone(initial.onboarding.thaiLabor);
+    parsed.onboarding.tasks["thai-labor-standard"] = Object.keys(parsed.onboarding.thaiLabor.accepted || {}).length;
+    parsed.onboarding.thaiCommitment = parsed.onboarding.thaiCommitment || clone(initial.onboarding.thaiCommitment);
+    const commitment = parsed.onboarding.thaiCommitment;
+    if (!commitment.submittedAt && commitment.method && commitment.method !== "Signed" && commitment.method !== "Download") {
+      Object.assign(commitment, { method: "", files: [], signedAt: undefined });
+    }
+    parsed.onboarding.tasks["thai-labor-commitment"] = parsed.onboarding.thaiCommitment.submittedAt ? 1 : 0;
+    parsed.onboarding.thaiAssessment = parsed.onboarding.thaiAssessment || clone(initial.onboarding.thaiAssessment);
+    parsed.onboarding.tasks["thai-labor-assessment"] = parsed.onboarding.thaiAssessment.submittedAt ? 1 : 0;
     const learning = parsed.onboarding.learningFlow;
     if (learning.quizVersion !== 2) {
       learning.answers = {};
@@ -56,7 +67,10 @@ export function loadDb(): Db {
     }
     parsed.onboarding.announcement = parsed.onboarding.announcement || clone(initial.onboarding.announcement);
     parsed.onboarding.evaluation = parsed.onboarding.evaluation || clone(initial.onboarding.evaluation);
+    parsed.onboarding.buyerInterest = parsed.onboarding.buyerInterest || clone(initial.onboarding.buyerInterest);
     parsed.requests = parsed.requests.map(policyFields);
+    parsed.srm = parsed.srm || clone(initial.srm);
+    for (const entry of parsed.srm.ghg?.cfo || []) entry.scope3Category = normalizeScope3(entry.scope3Category);
     for (const seeded of initial.requests) {
       if (!parsed.requests.some((request: Db["requests"][number]) => request.id === seeded.id)) parsed.requests.unshift(clone(seeded));
     }

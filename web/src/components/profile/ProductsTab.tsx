@@ -41,7 +41,7 @@ export default function ProductsTab() {
                   <Badge status={x.status} />
                 </td>
                 <td>
-                  <button type="button" className="text-link" onClick={() => setOpen(i)}>
+                  <button type="button" className="button small" onClick={() => setOpen(i)}>
                     View details
                   </button>
                 </td>

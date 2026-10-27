@@ -8,6 +8,9 @@ import { transition } from "@/lib/policy";
 import { routes } from "@/lib/routes";
 import { buyerRequestOf, canSubmitSample, sampleDocumentsRequired, sampleSubmissionErrors, sampleSubmissionOf, type SampleSubmission } from "@/lib/sample-request-flow";
 import { usePortal } from "@/lib/store";
+import { useConfirm } from "@/components/ConfirmDialog";
+import DemoFill from "@/components/DemoFill";
+import { demoSampleSubmission } from "@/lib/demo";
 import type { RequestRec } from "@/lib/types";
 import BuyerRequestBrief from "./BuyerRequestBrief";
 import FormField from "./FormField";
@@ -16,6 +19,7 @@ import UploadBox from "./UploadBox";
 function SubmissionEditor({ request }: { request: RequestRec }) {
   const { db, mutate, toast } = usePortal();
   const router = useRouter();
+  const confirm = useConfirm();
   const [submission, setSubmission] = useState(() => ({
     siteName: db.profile.factories[0]?.name || db.profile.company,
     siteAddress: db.profile.factories[0]?.address || db.profile.site,
@@ -35,7 +39,7 @@ function SubmissionEditor({ request }: { request: RequestRec }) {
     name: key, value: submission[key], onChange: (value: string) => update(key, value), hasError: Boolean(errors[key]), error: errors[key],
   });
 
-  const save = (submit: boolean) => {
+  const save = async (submit: boolean) => {
     if (!editable) return;
     if (submit) {
       const nextErrors = sampleSubmissionErrors(request, submission);
@@ -46,7 +50,7 @@ function SubmissionEditor({ request }: { request: RequestRec }) {
         document.querySelector<HTMLElement>(`[data-field="${first}"] input, [data-field="${first}"] textarea`)?.focus();
         return;
       }
-      if (!window.confirm(`Submit your sample information for Buyer request ${request.id}?`)) return;
+      if (!(await confirm({ message: "Submit your sample information for Buyer request {id}?", vars: { id: request.id }, confirmLabel: "Submit" }))) return;
     }
     let saved = false;
     mutate((draft) => {
@@ -85,6 +89,7 @@ function SubmissionEditor({ request }: { request: RequestRec }) {
       <PageHeading title="Provide sample information" desc={`${request.id} · ${request.name}`} action={<button className="button" onClick={() => router.push(routes.samples)}>Back to requests</button>} />
       {!editable ? <div className="notice">This request has already been submitted. <button className="text-link" onClick={() => router.push(routes.sample(request.id))}>View details</button></div> : (
         <>
+          <DemoFill onFill={() => { setErrors({}); setSubmission((current) => ({ ...current, ...demoSampleSubmission(current, { onsite, documentsRequired }) })); }} />
           <div className="sample-response-layout">
             <aside className="sample-request-context"><BuyerRequestBrief request={request} /><Badge status={request.status} /></aside>
             <div className="sample-response-fields">

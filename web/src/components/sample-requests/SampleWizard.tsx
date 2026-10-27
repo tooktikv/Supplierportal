@@ -7,6 +7,7 @@ import { addRequestDocuments, fmtDate, todayIso } from "@/lib/docs";
 import { CATEGORIES, isDigital, isPhysical, needsSample, policyFields, requiresApproval, transition } from "@/lib/policy";
 import { routes } from "@/lib/routes";
 import { usePortal } from "@/lib/store";
+import { useConfirm } from "@/components/ConfirmDialog";
 import type { FileMeta, RequestRec } from "@/lib/types";
 import FormField from "./FormField";
 import { createRequestId, kb, newDraftRequest, newSampleForm, stepErrors, WIZARD_NAMES } from "./sample-utils";
@@ -21,6 +22,7 @@ const TYPE_OPTIONS = [
 export default function SampleWizard() {
   const { db, mutate, toast, wizard, setWizard } = usePortal();
   const router = useRouter();
+  const confirm = useConfirm();
   const [errors, setErrors] = useState<Set<string>>(new Set());
   const initialised = useRef(false);
 
@@ -91,9 +93,9 @@ export default function SampleWizard() {
     router.push(routes.sample(id));
   };
 
-  const submitRequest = () => {
+  const submitRequest = async () => {
     if (!validateAll()) return;
-    if (!window.confirm(`Submit sample request for “${form.name}”? You can view its status and history after submission.`)) return;
+    if (!(await confirm({ message: "Submit sample request for “{name}”? You can view its status and history after submission.", vars: { name: String(form.name) }, confirmLabel: "Submit" }))) return;
     const now = todayIso();
     let id = form.id as string;
     if (id) {

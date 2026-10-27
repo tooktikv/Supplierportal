@@ -42,6 +42,7 @@ export default function ContactsTab({ adding, onAdd, onCancel, onSaved }: Props)
       {adding && (
         <ProfileEntryForm
           submitLabel="Add contact"
+          title="Add contact"
           onCancel={onCancel}
           onSubmit={save}
           fields={[

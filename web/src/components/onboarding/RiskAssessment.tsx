@@ -1,12 +1,17 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { riskAssessmentMessage, riskAssessmentState, riskTopics } from "@/lib/onboarding";
+import { routes } from "@/lib/routes";
 import { usePortal } from "@/lib/store";
+import DemoFill from "@/components/DemoFill";
+import { fillDemoRisk } from "@/lib/demo";
 
 const LEVELS = ["Low", "Medium", "High"];
 
 export default function RiskAssessment() {
   const { db, mutate, toast } = usePortal();
+  const router = useRouter();
   const answers = db.onboarding.riskAnswers;
   const count = Object.keys(answers).filter((k) => answers[k]).length;
 
@@ -21,10 +26,12 @@ export default function RiskAssessment() {
     if (riskTopics.some(([key]) => !LEVELS.includes(answers[key]))) return toast("Assess every topic before saving.");
     mutate((d) => void (d.onboarding.tasks["sustainability-risk"] = 1));
     toast("Mock risk assessment saved.");
+    router.push(routes.onboarding);
   };
 
   return (
     <>
+      {!db.onboarding.tasks["sustainability-risk"] && <DemoFill onFill={() => mutate(fillDemoRisk)} />}
       <div className="notice">
         Demo only: select a risk level for each topic. The supplied requirements call for a system-calculated Inherent Risk result and topic quizzes, but no upstream scoring rules or quiz content were provided.
       </div>

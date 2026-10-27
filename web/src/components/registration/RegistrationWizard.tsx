@@ -19,6 +19,8 @@ import {
 } from "@/lib/registration";
 import { routes } from "@/lib/routes";
 import { usePortal } from "@/lib/store";
+import { useConfirm } from "@/components/ConfirmDialog";
+import DemoRegistrationTools from "@/components/DemoRegistrationTools";
 import CocScreen from "./CocScreen";
 import RegAside from "./RegAside";
 import { focusFirstRegError, type RegFormApi } from "./RegField";
@@ -30,6 +32,7 @@ import { useRegUi } from "./useRegUi";
 export default function RegistrationWizard() {
   const { db, mutate, toast } = usePortal();
   const router = useRouter();
+  const confirm = useConfirm();
   const ui = useRegUi();
   const [mapSnap, setMapSnap] = useState<MapSnap>(() => pickMap(db.registration.data));
   const r = db.registration;
@@ -39,7 +42,7 @@ export default function RegistrationWizard() {
     if (ui.focusTick) focusFirstRegError();
   }, [ui.focusTick]);
 
-  if (!r.cocAccepted) return <CocScreen />;
+  if (!r.cocAccepted) return <><DemoRegistrationTools mode="fill" /><CocScreen /></>;
 
   const formFor = (scope: string): RegFormApi => {
     const data: RegData = regScopeData(db, scope) ?? {};
@@ -120,7 +123,7 @@ export default function RegistrationWizard() {
     });
   };
 
-  const submit = () => {
+  const submit = async () => {
     if (r.status === "Submitted") return;
     for (const s of [1, 2, 3]) {
       if (regStepErrors(r, s).length) {
@@ -128,7 +131,7 @@ export default function RegistrationWizard() {
         return reportErrors("กรุณาตรวจสอบข้อมูลที่ยังไม่ครบถ้วนก่อนส่ง");
       }
     }
-    if (!window.confirm("ยืนยันการส่งข้อมูลการลงทะเบียนผู้ขาย?")) return;
+    if (!(await confirm({ message: "ยืนยันการส่งข้อมูลการลงทะเบียนผู้ขาย?", confirmLabel: "ส่งข้อมูล" }))) return;
     mutate(applyRegistration);
     ui.setShowAll(false);
     ui.clearTouched();
@@ -193,6 +196,7 @@ export default function RegistrationWizard() {
     <div className="reg-layout">
       <RegAside registration={r} onGo={go} />
       <div className="reg-main">
+        <DemoRegistrationTools mode="fill" />
         {body}
         <div className="card reg-footer">
           {r.step > 1 ? (

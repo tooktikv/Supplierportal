@@ -1,10 +1,24 @@
 import { supplierQuestionnaire } from "./data";
-import { gateOf, needsSample } from "./policy";
 import type { Db } from "./types";
 
 export const registrationDone = (db: Db) => db.registration.status === "Submitted";
 
-export const onboardingTasks = [
+export const SOURCING_GROUP = "Sustainable sourcing & supplier selection";
+export const THAI_LABOR_GROUP = "มาตรฐานแรงงานไทย (มรท.)";
+
+export interface OnboardingTask {
+  id: string;
+  title: string;
+  category: string;
+  required: number;
+  description: string;
+  icon: string;
+  group: string;
+  /** Only needed when an earlier answer flags a risk. */
+  conditional?: boolean;
+}
+
+export const onboardingTasks: OnboardingTask[] = [
   {
     id: "sourcing-policy",
     title: "Sustainable Sourcing Policy and Supplier Guiding Principles",
@@ -12,14 +26,7 @@ export const onboardingTasks = [
     required: 3,
     description: "Watch the e-learning video, accept the policy document, then complete the policy questionnaire.",
     icon: "▤",
-  },
-  {
-    id: "sustainability-risk",
-    title: "Sustainability Risk Assessment",
-    category: "Assessment",
-    required: 1,
-    description: "Complete the topic assessment when the demo screening flags a risk.",
-    icon: "◈",
+    group: SOURCING_GROUP,
   },
   {
     id: "supplier-questionnaire",
@@ -28,6 +35,44 @@ export const onboardingTasks = [
     required: 1,
     description: "Complete the supplier pre-screening questionnaire for your company.",
     icon: "☷",
+    group: SOURCING_GROUP,
+  },
+  {
+    id: "sustainability-risk",
+    title: "Sustainability Risk Assessment",
+    category: "Assessment",
+    required: 1,
+    description: "Complete the topic assessment when the demo screening flags a risk.",
+    icon: "◈",
+    group: SOURCING_GROUP,
+    conditional: true,
+  },
+  {
+    id: "thai-labor-standard",
+    title: "มาตรฐานแรงงานไทย (มรท.) e-Learning",
+    category: "Learning",
+    required: 5,
+    description: "Review 5 learning items (videos and PDF documents) and accept each one before continuing.",
+    icon: "▤",
+    group: THAI_LABOR_GROUP,
+  },
+  {
+    id: "thai-labor-commitment",
+    title: "หนังสือแสดงความมุ่งมั่นของผู้ส่งมอบหรือผู้รับเหมาช่วง (F-TLS-02)",
+    category: "Form",
+    required: 1,
+    description: "Read the commitment letter, accept it, then sign it with AXONS Sign or download it, sign by hand and upload the PDF.",
+    icon: "✎",
+    group: THAI_LABOR_GROUP,
+  },
+  {
+    id: "thai-labor-assessment",
+    title: "แบบประเมินผู้ส่งมอบ/ผู้รับเหมาช่วง ตามมาตรฐานแรงงานไทย มรท.8001 : 2563 (F-TLS-01)",
+    category: "Self-assessment",
+    required: 1,
+    description: "Enter your workforce details and complete the 21-item self-assessment. The score and result are calculated by the system.",
+    icon: "☑",
+    group: THAI_LABOR_GROUP,
   },
 ];
 
@@ -56,14 +101,18 @@ export function riskAssessmentState(db: Db): "pending" | "required" | "not-requi
 
 export function riskAssessmentMessage(db: Db) {
   return riskAssessmentState(db) === "pending"
-    ? "Complete and submit the New Supplier Selection Questionnaire first. In this demo, any No response triggers a follow-up assessment."
+    ? "Complete Step 2 · New Supplier Selection Questionnaire first. In this demo, any No response triggers a follow-up assessment."
     : "No No responses were identified in the demo questionnaire. Additional assessment is not required.";
 }
 
 export function taskBlockedMessage(db: Db, id: string) {
   if (!registrationDone(db)) return "Complete supplier registration first.";
+  if (id === "thai-labor-commitment" && taskCount(db, "thai-labor-standard") < 5)
+    return "Complete Step 1 · TLS e-Learning (all 5 items) first.";
+  if (id === "thai-labor-assessment" && (taskCount(db, "thai-labor-standard") < 5 || taskCount(db, "thai-labor-commitment") < 1))
+    return "Complete Step 1 · TLS e-Learning and Step 2 · commitment letter (F-TLS-02) first.";
   if (id === "supplier-questionnaire" && !questionnaireAvailable(db))
-    return "Complete all 3 learning activities in Sustainable Sourcing Policy and Supplier Guiding Principles first.";
+    return "Complete Step 1 · Sustainable Sourcing Policy (all 3 activities) first.";
   if (id === "sustainability-risk" && riskAssessmentState(db) !== "required") return riskAssessmentMessage(db);
   return "";
 }
@@ -73,6 +122,8 @@ export const requiredOnboardingTasks = (db: Db) =>
 
 export const allTasksComplete = (db: Db) =>
   requiredOnboardingTasks(db).every((task) => taskCount(db, task.id) >= task.required);
+
+export const buyerInterested = (db: Db) => registrationDone(db) && db.onboarding.buyerInterest?.status === "Interested";
 
 export function onboardingStages(db: Db) {
   const registered = registrationDone(db);
@@ -98,8 +149,9 @@ export function onboardingStages(db: Db) {
     {
       title: "Your tasks",
       description: registered
-        ? `${required.reduce((sum, t) => sum + taskCount(db, t.id), 0)} of ${required.reduce((sum, t) => sum + t.required, 0)} activities completed`
+        ? "{done} of {total} activities completed"
         : "Unlocks after your registration is submitted",
+      vars: { done: required.reduce((sum, t) => sum + taskCount(db, t.id), 0), total: required.reduce((sum, t) => sum + t.required, 0) },
       status: tasksDone ? "Completed" : registered ? "In Progress" : "Not Started",
     },
     {
@@ -113,15 +165,6 @@ export function onboardingStages(db: Db) {
       status: db.onboarding.evaluation.status === "Completed" ? "Completed" : announced ? "In Progress" : "Not Started",
     },
   ];
-}
-
-export function onboardingGate(db: Db) {
-  const category = db.profile.onboardingCategory;
-  if (!needsSample(category)) return "Exempt";
-  const latest = db.requests
-    .filter((r) => r.category === category)
-    .sort((a, b) => (b.updated || "").localeCompare(a.updated || ""))[0];
-  return latest ? gateOf(latest) : "Pending";
 }
 
 export function questionnaireSystemAnswer(db: Db, key: string) {

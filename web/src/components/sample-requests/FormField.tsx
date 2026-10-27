@@ -40,7 +40,7 @@ export default function FormField({
   if (select) {
     control = (
       <select className="field-control" id={name} value={current} onChange={(e) => onChange(e.target.value)}>
-        <option value="">Choose a category</option>
+        <option value="">{placeholder || "Choose a category"}</option>
         {select.map((c) => (
           <option key={c}>{c}</option>
         ))}

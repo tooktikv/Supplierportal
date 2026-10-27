@@ -97,4 +97,5 @@ export interface Db {
     learningFlow: Record<string, any>;
   };
   documents: DocRecord[];
+  srm: import("./srm").SrmState;
 }

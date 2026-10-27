@@ -7,6 +7,8 @@ import { learningLessons, learningQuestions, learningVideoId } from "@/lib/data"
 import { fmtDate } from "@/lib/docs";
 import { routes } from "@/lib/routes";
 import { usePortal } from "@/lib/store";
+import DemoFill from "@/components/DemoFill";
+import { fillDemoLearning } from "@/lib/demo";
 
 interface QuizResult {
   score: number;
@@ -250,6 +252,7 @@ export default function LearningFlow() {
 
   return (
     <>
+      {!result?.passed && <DemoFill onFill={() => mutate(fillDemoLearning)} />}
       <div className="notice">Complete one activity at a time, then select Next. Progress and answers are saved only in this browser for this fictional course.</div>
       <nav className="learning-stepper" aria-label="Learning steps">
         {STEP_TITLES.map((title, index) => (

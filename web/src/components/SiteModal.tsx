@@ -6,6 +6,11 @@ import { usePortal } from "@/lib/store";
 import RegField, { focusFirstRegError, type RegFormApi } from "@/components/registration/RegField";
 import RegMap, { MAP_KEYS, pickMap, type MapSnap } from "@/components/registration/RegMap";
 import { useRegUi } from "@/components/registration/useRegUi";
+import DemoFill from "@/components/DemoFill";
+
+const DEMO_SITE: RegData = {
+  name: "Asteron Demo Factory", country: "ไทย", address: "88 หมู่ 4 ถนนบางนา-ตราด", province: "สมุทรปราการ", district: "บางพลี", subdistrict: "บางพลีใหญ่", postal: "10540", lat: "13.6000", lng: "100.7000", mapQuery: "",
+};
 
 const field = (k: string) => SITE_FIELDS.find((f) => f.k === k)!;
 
@@ -76,6 +81,7 @@ function SiteDialog({ onClose }: { onClose: () => void }) {
           ×
         </button>
         <div className="modal-body">
+          <DemoFill onFill={() => { setDraft({ ...DEMO_SITE }); setMapSnap(pickMap(DEMO_SITE)); }} />
           <h2 id="site-modal-title">ที่อยู่โรงงานผู้ผลิตสินค้า</h2>
           <div className="reg-grid">{["name", "country", "address", "province", "district", "subdistrict", "postal"].map(render)}</div>
           <h3 className="modal-subtitle">พิกัดที่ตั้งโรงงานผู้ผลิตสินค้า</h3>
