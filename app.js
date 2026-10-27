@@ -103,7 +103,7 @@
     onboarding: {
       eLearning: {status:"Completed",updated:"2026-10-04"},
       selfRegistration: {status:"Not Started",updated:""},
-      procurementReview: {status:"Completed",updated:"2026-10-17"},
+      procurementReview: {status:"Pending",updated:""},
       tasks: {"sourcing-policy":0,"sustainability-risk":0,"supplier-questionnaire":0},
       learningQuizAnswers: {},
       learningQuizResults: {},
@@ -115,7 +115,7 @@
     },
     documents: [
       {name:"Certificate of Incorporation",type:"Company Registration",related:"Asteron Industrial Supply",issue:"2022-03-14",expiry:"—",status:"Verified",group:"Registration"},
-      {name:"ISO 9001:2015 Certificate",type:"Quality Certification",related:"Asteron Portland Manufacturing",issue:"2025-05-01",expiry:"2027-04-30",status:"Current",group:"Pre-Screening"},
+      {name:"ISO 9001:2015 Certificate",type:"Quality Certification",related:"Asteron Portland Manufacturing",issue:"2025-05-01",expiry:"2027-04-30",status:"Current",group:"Pre-Screening",history:[{version:1,date:"2022-05-01",files:[{name:"iso-9001-2022.pdf",expiry:"2025-04-30"}]},{version:2,date:"2025-05-01",files:[{name:"iso-9001-2025.pdf",expiry:"2027-04-30"}]}]},
       {name:"W-9 Tax Form",type:"Tax Documentation",related:"Asteron Industrial Supply",issue:"2026-01-12",expiry:"—",status:"Current",group:"Registration"},
       {name:"Factory Audit Summary",type:"Factory Documentation",related:"Asteron Portland Manufacturing",issue:"2025-11-08",expiry:"2026-10-18",status:"Expired",group:"Pre-Screening"},
       {name:"Product Liability Insurance",type:"Insurance Certificate",related:"Asteron Industrial Supply",issue:"2025-11-05",expiry:"2026-11-05",status:"Expiring Soon",group:"Pre-Screening"},
@@ -125,8 +125,14 @@
     ]
   };
   let db = loadDb();
-  let page = "Supplier Onboarding", selectedId = null, form = null, wizardStep = 0, responseMode = "feedback", currentTask = null, profileTab = "Company information", documentFilter = "All", selectedDocument = null, profileEditMode = false, profileEntryMode = null;
-  const documentPreviews=new Map();
+  let page = "Supplier Onboarding", selectedId = null, form = null, wizardStep = 0, responseMode = "feedback", currentTask = null, profileTab = "Company information", documentFilter = "All", pendingDocs = [], pendingMeta = null, previewDoc = null, profileEditMode = false, profileEntryMode = null, siteDraft = null;
+  const filePreviews=new Map();
+  // Keeps a session-only object URL so uploaded files can be previewed later
+  function trackFile(file,type) {
+    const uid=`${Date.now().toString(36)}${Math.random().toString(36).slice(2,8)}`;
+    if(/\.(pdf|png|jpe?g)$/i.test(file.name))filePreviews.set(uid,URL.createObjectURL(file));
+    return {name:file.name,size:file.size,type,expiry:"",uid};
+  }
   let filters = { search:"", status:"All statuses", category:"All categories", type:"All types", date:"Any date" }, sort = { key:"created", direction:"desc" };
 
   function loadDb() {
@@ -162,6 +168,7 @@
         document.history=document.history||[];
       });
       parsed.onboarding.procurementReview=parsed.onboarding.procurementReview||structuredClone(initial.onboarding.procurementReview);
+      if(parsed.onboarding.stageVersion!==2) { parsed.onboarding.procurementReview=structuredClone(initial.onboarding.procurementReview); parsed.onboarding.stageVersion=2; }
       parsed.onboarding.announcement=parsed.onboarding.announcement||structuredClone(initial.onboarding.announcement);
       parsed.onboarding.evaluation=parsed.onboarding.evaluation||structuredClone(initial.onboarding.evaluation);
       parsed.requests=parsed.requests.map(policyFields);
@@ -177,6 +184,38 @@
   }
   const escapeHtml = (value="") => String(value).replace(/[&<>"']/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
   const fmtDate = value => value ? new Intl.DateTimeFormat("en-US",{month:"short",day:"numeric",year:"numeric"}).format(new Date(value.length === 10 ? `${value}T12:00:00` : value)) : "—";
+  const todayIso = () => new Date().toISOString().slice(0,10);
+  // `call` is the full inline handler expression and must end with this.value
+  const expiryField = (call,value,label="Expiry date",disabled=false) => `<label class="file-expiry">${label}<input type="date" min="${todayIso()}" value="${escapeHtml(value||"")}" ${disabled?"disabled":""} onchange="${call}"></label>`;
+  const expiryAccepted = (value,message) => { if(value&&value<todayIso()) { toast(message);return false; } return true; };
+  const DOC_SOURCES = {Registration:"Supplier registration","Pre-Screening":"Pre-screening","Sample Request":"Sample request",Manual:"Manual upload"};
+  const docSource = doc => DOC_SOURCES[doc.group]||doc.group||"—";
+  const findDocByName = (name,type) => db.documents.find(d=>d.name.trim().toLowerCase()===String(name||"").trim().toLowerCase()&&(!type||d.type===type));
+  // Each document keeps every upload as a version; old-shape or seeded records are converted on read
+  function docVersions(doc) {
+    const expiry=doc.expiry&&doc.expiry!=="—"?doc.expiry:"";
+    const list=(doc.history||[]).map(v=>v.files?v:{version:v.version,date:v.date,files:[{name:v.fileName||doc.name,size:doc.fileSize,expiry}]});
+    return list.length||!doc.issue?list:[{version:1,date:doc.issue,files:[{name:`${doc.name}.pdf`,expiry}]}];
+  }
+  const latestUpload = doc => docVersions(doc).at(-1)?.date||doc.issue||"";
+  function expiryState(doc) {
+    if(!doc.expiry||doc.expiry==="—")return "";
+    const days=(new Date(`${doc.expiry}T23:59:59`)-new Date())/864e5;
+    return days<0?"Expired":days<=30?"Expiring Soon":"";
+  }
+  // Same document name = new version of the existing record; the older versions stay in history
+  function pushDocument(files,{name,type,group,related=db.profile.company}) {
+    files=[].concat(files);
+    if(!files.length)return null;
+    let doc=findDocByName(name,type);
+    if(doc)doc.history=docVersions(doc);
+    else { doc={id:`DOC-${String(db.documents.length+1).padStart(4,"0")}`,name,type,related,group,status:"Pending",history:[]};db.documents.push(doc); }
+    const today=todayIso(), expiries=files.map(f=>f.expiry).filter(Boolean).sort();
+    doc.history.push({version:doc.history.length+1,date:today,files:files.map(f=>({name:f.name,size:f.size,type:f.type||"",expiry:f.expiry||"",uid:f.uid}))});
+    Object.assign(doc,{issue:today,expiry:expiries[0]||"",status:"Pending"});
+    return doc;
+  }
+  const addRequestDocuments = (r,files=r.files||[]) => pushDocument(files,{name:`Sample attachments · ${r.name}`,type:"Product Evidence",group:"Sample Request",related:r.name});
   const isPhysical = type => type === "Physical" || type === "Both";
   const isDigital = type => type === "Digital" || type === "Both";
   function gateOf(r) {
@@ -229,6 +268,7 @@
   function taskCount(id) { return Math.min(onboardingTasks.find(t=>t.id===id)?.required||0,Number(db.onboarding.tasks[id])||0); }
   function questionnaireAvailable() { return taskCount("sourcing-policy")===3; }
   function taskBlockedMessage(id) {
+    if(!registrationDone())return "Complete supplier registration first.";
     if(id==="supplier-questionnaire"&&!questionnaireAvailable())return "Complete all 3 learning activities in Sustainable Sourcing Policy and Supplier Guiding Principles first.";
     if(id==="sustainability-risk"&&riskAssessmentState()!=="required")return riskAssessmentMessage();
     return "";
@@ -245,14 +285,15 @@
   }
   function allTasksComplete() { return requiredOnboardingTasks().every(task=>taskCount(task.id)>=task.required); }
   function onboardingStages() {
-    const registered=["Submitted","Completed"].includes(db.onboarding.selfRegistration.status);
-    const reviewed=db.onboarding.procurementReview.status==="Completed";
-    const tasksDone=allTasksComplete();
-    const announced=db.onboarding.announcement.status==="Completed";
+    const registered=registrationDone();
+    const reviewed=registered&&db.onboarding.procurementReview.status==="Completed";
+    const tasksDone=registered&&allTasksComplete();
+    const announced=tasksDone&&db.onboarding.announcement.status==="Completed";
+    const required=requiredOnboardingTasks();
     return [
-      {title:"Supplier registration",description:"Company registration submitted",status:registered?"Completed":"In Progress"},
-      {title:"Procurement review",description:"Registration details reviewed by procurement",status:reviewed?"Completed":registered?"In Progress":"Not Started"},
-      {title:"Your tasks",description:`${requiredOnboardingTasks().reduce((sum,t)=>sum+taskCount(t.id),0)} of ${requiredOnboardingTasks().reduce((sum,t)=>sum+t.required,0)} activities completed`,status:tasksDone?"Completed":reviewed?"In Progress":"Not Started"},
+      {title:"Supplier registration",description:registered?"Company registration submitted":"Complete the Supplier Registration task below",status:registered?"Completed":"In Progress"},
+      {title:"Procurement review",description:reviewed?"Registration details reviewed by procurement":registered?"Procurement is reviewing your registration":"Starts after your registration is submitted",status:reviewed?"Completed":registered?"In Progress":"Not Started"},
+      {title:"Your tasks",description:registered?`${required.reduce((sum,t)=>sum+taskCount(t.id),0)} of ${required.reduce((sum,t)=>sum+t.required,0)} activities completed`:"Unlocks after your registration is submitted",status:tasksDone?"Completed":registered?"In Progress":"Not Started"},
       {title:"Awaiting announcement",description:"Supplier pre-screening outcome will be shared when ready",status:announced?"Completed":tasksDone?"In Progress":"Not Started"},
       {title:"New supplier evaluation result",description:"Final supplier evaluation outcome",status:db.onboarding.evaluation.status==="Completed"?"Completed":announced?"In Progress":"Not Started"}
     ];
@@ -345,7 +386,7 @@
       ?[["idCopy","สำเนาบัตรประชาชน","pdf"],["houseReg","สำเนาทะเบียนบ้าน","pdf"],["sitePhotos","รูปถ่ายสถานประกอบการ","img"]]
       :[["companyInfo","ข้อมูลบริษัท","pdf"],["certificate","หนังสือรับรอง","pdf"],["vat20","ภ.พ.20","pdf"],["signerId","สำเนาบัตรประชาชนผู้มีอำนาจลงนาม","pdf"],["sitePhotos","รูปถ่ายสถานประกอบการ","img"]];
     return list.flatMap(([id,label,kind])=>{
-      const field={k:`f_${id}`,label,t:"file",kind,req:1};
+      const field={k:`f_${id}`,label,t:"file",kind,req:1,docType:{vat20:"Tax Documentation",sitePhotos:"Site Photos",idCopy:"Identity Document",houseReg:"Identity Document",signerId:"Identity Document"}[id]||"Company Registration"};
       if(id==="vat20")field.show=x=>x.vatRegistered==="จดทะเบียนแล้ว";
       return id==="sitePhotos"?[field,{k:"photoConfirm",label:"ฉันยืนยันว่ารูปถ่ายสถานประกอบการเป็นปัจจุบันจากสถานที่จริง และมีอายุไม่เกิน 6 เดือน",t:"checkbox",req:1}]:[field];
     });
@@ -357,11 +398,23 @@
     {k:"details",label:"รายละเอียดของกลุ่มสินค้า (Category Details)",t:"textarea",max:5000,ph:"ระบุรายละเอียด (ไม่เกิน 5000 ตัวอักษร)"},
     {k:"files",label:"แคตตาล็อก (Catalog)",t:"file",kind:"pdf",req:1}
   ];
+  const SITE_FIELDS=[
+    {k:"name",label:"ชื่อโรงงานผู้ผลิตสินค้า",t:"text",req:1,max:255,span:2,ph:"ระบุชื่อโรงงานผู้ผลิตสินค้า"},
+    {k:"country",label:"ประเทศ",t:"select",opts:REG_COUNTRIES,req:1,span:2,ph:"เลือกประเทศ"},
+    {k:"address",label:"ที่อยู่",t:"text",req:1,max:500,span:4,ph:"ระบุที่อยู่"},
+    {k:"province",label:"จังหวัด",t:"select",opts:Object.keys(REG_ADDRESS),req:1,ph:"เลือกจังหวัด",reset:["district","subdistrict"]},
+    {k:"district",label:"เขต/อำเภอ",t:"select",opts:d=>Object.keys(REG_ADDRESS[d.province]||{}),req:1,ph:"เลือกเขต/อำเภอ",reset:["subdistrict"],dis:d=>!d.province},
+    {k:"subdistrict",label:"แขวง/ตำบล",t:"select",opts:d=>REG_ADDRESS[d.province]?.[d.district]||[],req:1,ph:"เลือกแขวง/ตำบล",dis:d=>!d.district},
+    {k:"postal",label:"รหัสไปรษณีย์",t:"text",mode:"numeric",req:1,ph:"ระบุรหัสไปรษณีย์",check:(v,d)=>d.country==="ไทย"?(/^\d{5}$/.test(v)?"":"ระบุรหัสไปรษณีย์ 5 หลัก"):(/^\d{3,10}$/.test(v)?"":"ระบรหัสไปรษณีย์เป็นตัวเลข")},
+    {k:"lat",label:"ละติจูด",t:"text",mode:"decimal",req:1,ph:"ระบุละติจูด",check:chkCoord(-90,90,"ละติจูด")},
+    {k:"lng",label:"ลองจิจูด",t:"text",mode:"decimal",req:1,ph:"ระบุลองจิจูด",check:chkCoord(-180,180,"ลองจิจูด")},
+    {k:"mapQuery",label:"สถานที่ตั้งโรงงานผู้ผลิตสินค้า",t:"text",span:4,ph:"ค้นหาสถานที่"}
+  ];
   let regShowAll=false;
   const regTouched=new Set();
   const registrationDone=()=>db.registration.status==="Submitted";
-  const regScopeData=scope=>scope==="reg"?db.registration.data:db.registration.categories[Number(String(scope).slice(4))];
-  const regFieldsFor=(scope,d)=>scope==="reg"?[...REG_STEP1.flatMap(s=>s.fields),...regDocFields(d)]:regCatFields();
+  const regScopeData=scope=>scope==="site"?siteDraft:scope==="reg"?db.registration.data:db.registration.categories[Number(String(scope).slice(4))];
+  const regFieldsFor=(scope,d)=>scope==="site"?SITE_FIELDS:scope==="reg"?[...REG_STEP1.flatMap(s=>s.fields),...regDocFields(d)]:regCatFields();
   const regId=(scope,k)=>`reg-${scope.replace(":","-")}-${k}`;
   const regShowError=(scope,k)=>regShowAll||regTouched.has(`${scope}|${k}`);
   function regFieldError(f,d) {
@@ -376,7 +429,7 @@
   }
   function regFieldHtml(scope,f,d) {
     const dis=Boolean(f.dis?.(d)), ro=Boolean(f.ro?.(d)), id=regId(scope,f.k), val=d[f.k]??"", a=`'${scope}','${f.k}'`;
-    const span=f.span||(["file","textarea","checkbox"].includes(f.t)?4:1);
+    const span=f.span||(f.t==="file"?(scope==="reg"?2:4):["textarea","checkbox"].includes(f.t)?4:1);
     const err=regShowError(scope,f.k)?regFieldError(f,d):"";
     const opts=typeof f.opts==="function"?f.opts(d):(f.opts||[]);
     const star=f.req?'<span class="required"> *</span>':"";
@@ -387,15 +440,15 @@
     else if(f.t==="textarea")control=`<textarea class="field-control" id="${id}" rows="4" placeholder="${escapeHtml(f.ph||"")}" ${events}>${escapeHtml(val)}</textarea>`;
     else if(f.t==="date")control=`<div class="reg-date"><input class="field-control" id="${id}" type="text" inputmode="numeric" value="${escapeHtml(val)}" placeholder="${escapeHtml(f.ph||"")}" autocomplete="off" ${events}><button type="button" class="reg-date-button" aria-label="เลือกวันที่" onclick="window.portalRegDatePick(${a})">▦</button><input type="date" class="reg-date-native" id="${id}-native" tabindex="-1" aria-hidden="true" onchange="window.portalRegDateNative(${a},this.value)"></div>`;
     else if(f.t==="file") {
-      const files=Array.isArray(val)?val:[], img=f.kind==="img";
-      control=`<div class="upload-box"><div class="helper">${img?"PNG หรือ JPG":"PDF"} · สูงสุด 5 MB ต่อไฟล์ · สูงสุด 5 ไฟล์ (${files.length}/5) · ต้นแบบนี้เก็บเฉพาะชื่อไฟล์ในเบราว์เซอร์</div><input type="file" id="${id}" multiple accept="${img?".png,.jpg,.jpeg":".pdf"}" onchange="window.portalRegFiles(${a},this.files)" ${files.length>=5?"disabled":""}><div class="file-list">${files.map((x,i)=>`<div class="file-row"><span>▤ &nbsp;${escapeHtml(x.name)} <small>(${(x.size/1024).toFixed(0)} KB)</small></span><button type="button" aria-label="ลบ ${escapeHtml(x.name)}" onclick="window.portalRegRemoveFile(${a},${i})">ลบ</button></div>`).join("")}</div></div>`;
+      const files=Array.isArray(val)?val:[], img=f.kind==="img", full=files.length>=5;
+      control=`<div class="doc-card ${files.length?"done":""}"><div class="doc-card-head"><span class="doc-icon">${img?"▣":"▤"}</span><div><strong>${escapeHtml(f.label)}${star}</strong><small>${img?"PNG หรือ JPG":"PDF"} · สูงสุด 5 MB ต่อไฟล์</small></div><span class="doc-state">${files.length?`✓ อัปโหลดแล้ว ${files.length}/5`:"ยังไม่ได้อัปโหลด"}</span></div><label class="doc-drop ${full?"full":""}" ondragenter="this.classList.add('over')" ondragleave="this.classList.remove('over')" ondrop="this.classList.remove('over')"><input type="file" id="${id}" multiple accept="${img?".png,.jpg,.jpeg":".pdf"}" aria-label="${escapeHtml(f.label)}" onchange="window.portalRegFiles(${a},this.files)" ${full?"disabled":""}><span class="doc-drop-icon">↑</span><span><b>${full?"อัปโหลดครบ 5 ไฟล์แล้ว":"ลากไฟล์มาวาง หรือ <u>เลือกไฟล์</u>"}</b></span></label>${files.length?`<div class="file-list">${files.map((x,i)=>`<div class="file-row"><span class="file-ico">${escapeHtml(x.name.split(".").pop().toUpperCase().slice(0,4))}</span><span class="file-name">${escapeHtml(x.name)}<small>${(x.size/1024).toFixed(0)} KB</small></span><button type="button" aria-label="ลบ ${escapeHtml(x.name)}" onclick="window.portalRegRemoveFile(${a},${i})">ลบ</button>${!img&&scope==="reg"?expiryField(`window.portalRegFileExpiry(${a},${i},this.value)`,x.expiry,"วันหมดอายุเอกสาร (ถ้ามี)"):""}</div>`).join("")}</div>`:""}</div>`;
     } else if(f.t==="checkbox")control=`<label class="reg-check"><input type="checkbox" id="${id}" ${val?"checked":""} onchange="window.portalRegCheck(${a},this.checked)"><span>${escapeHtml(f.label)}${star}</span></label>`;
     else control=`<input class="field-control" id="${id}" type="text" inputmode="${f.mode||"text"}" value="${escapeHtml(val)}" placeholder="${escapeHtml(f.ph||"")}" autocomplete="off" ${dis?"disabled":""} ${ro?"readonly":""} ${events}>`;
-    const label=f.t==="checkbox"?"":`<label for="${id}">${escapeHtml(f.label)}${star}</label>`;
+    const label=f.t==="checkbox"||f.t==="file"?"":`<label for="${id}">${escapeHtml(f.label)}${star}</label>`;
     return `<div class="form-field reg-field reg-s${span} ${err?"has-error":""}" data-reg-field="${scope}|${f.k}">${label}${control}<span class="form-error">${escapeHtml(err)}</span></div>`;
   }
-  function regSectionHtml(scope,title,fields,d,extra="",hint="",after="") {
-    return `<section class="card section-card reg-section"><div class="section-title"><div><h2>${title}</h2>${hint?`<small class="helper">${hint}</small>`:""}</div>${extra}</div><div class="reg-grid">${fields.filter(f=>!f.show||f.show(d)).map(f=>regFieldHtml(scope,f,d)).join("")}</div>${after}</section>`;
+  function regSectionHtml(scope,title,fields,d,o={}) {
+    return `<section class="card reg-section" ${o.id?`id="${o.id}"`:""}><header class="reg-section-head">${o.num?`<span class="reg-sec-num">${o.num}</span>`:""}<div class="reg-section-title"><h2>${title}</h2>${o.hint?`<p>${o.hint}</p>`:""}</div>${o.extra||""}</header><div class="reg-grid">${fields.filter(f=>!f.show||f.show(d)).map(f=>regFieldHtml(scope,f,d)).join("")}</div>${o.after||""}</section>`;
   }
   function regMapHtml(d) {
     const lat=String(d.lat??"").trim(), lng=String(d.lng??"").trim();
@@ -405,7 +458,7 @@
     return `<iframe class="reg-map-frame" title="แผนที่ตำแหน่งที่ตั้ง" src="https://maps.google.com/maps?q=${encodeURIComponent(q)}&z=15&output=embed" loading="lazy" referrerpolicy="no-referrer"></iframe><a class="text-link" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}" target="_blank" rel="noopener noreferrer">เปิดใน Google Maps →</a>`;
   }
   function regCocHtml() {
-    return `<section class="card section-card reg-section"><h2>ข้อกำหนดและเงื่อนไข (CoC / T&amp;D)</h2><div class="notice">เข้าสู่ระบบด้วย ${escapeHtml(COMPANY.email)} · ผู้ขายใหม่ต้องยอมรับ CoC และ T&amp;D ก่อนลงทะเบียนข้อมูลผู้ขาย</div><div class="policy-document policy-preview" role="region" aria-label="CoC and T&amp;D"><h4>จรรยาบรรณคู่ค้าธุรกิจ (Code of Conduct)</h4><ul class="lesson-points"><li>ดำเนินธุรกิจอย่างซื่อสัตย์ โปร่งใส และไม่เสนอหรือรับผลประโยชน์ที่ไม่เหมาะสม</li><li>เคารพสิทธิมนุษยชนและปฏิบัติต่อแรงงานอย่างเป็นธรรม</li><li>ดูแลความปลอดภัยและสิ่งแวดล้อมในการดำเนินงาน</li></ul><h4>ข้อกำหนดและเงื่อนไขการใช้งาน (Terms &amp; Conditions)</h4><ul class="lesson-points"><li>ข้อมูลที่ลงทะเบียนต้องถูกต้อง เป็นปัจจุบัน และสามารถตรวจสอบได้</li><li>บริษัทสามารถขอเอกสารเพิ่มเติมและตรวจสอบข้อมูลของผู้ขายได้</li><li>ผู้ขายรับผิดชอบการรักษาความลับของบัญชีผู้ใช้งาน</li></ul><p class="mock-note">เนื้อหาตัวอย่างสำหรับต้นแบบ ไม่ใช่ข้อกำหนดทางกฎหมายจริง</p></div><label class="commitment-row"><input id="reg-coc" type="checkbox" onchange="window.portalRegCocCheck(this.checked)"><span>Accept CoC and T&amp;D <span class="required">*</span></span></label><div class="reg-actions"><button class="button primary" id="reg-coc-start" disabled onclick="window.portalRegStart()">ยอมรับและเริ่มลงทะเบียน</button></div></section>`;
+    return `<section class="card reg-section"><header class="reg-section-head"><span class="reg-sec-num">§</span><div class="reg-section-title"><h2>ข้อกำหนดและเงื่อนไข (CoC / T&amp;D)</h2><p>อ่านและยอมรับก่อนเริ่มลงทะเบียนข้อมูลผู้ขาย</p></div></header><div class="notice">เข้าสู่ระบบด้วย ${escapeHtml(COMPANY.email)} · ผู้ขายใหม่ต้องยอมรับ CoC และ T&amp;D ก่อนลงทะเบียนข้อมูลผู้ขาย</div><div class="policy-document policy-preview" role="region" aria-label="CoC and T&amp;D"><h4>จรรยาบรรณคู่ค้าธุรกิจ (Code of Conduct)</h4><ul class="lesson-points"><li>ดำเนินธุรกิจอย่างซื่อสัตย์ โปร่งใส และไม่เสนอหรือรับผลประโยชน์ที่ไม่เหมาะสม</li><li>เคารพสิทธิมนุษยชนและปฏิบัติต่อแรงงานอย่างเป็นธรรม</li><li>ดูแลความปลอดภัยและสิ่งแวดล้อมในการดำเนินงาน</li></ul><h4>ข้อกำหนดและเงื่อนไขการใช้งาน (Terms &amp; Conditions)</h4><ul class="lesson-points"><li>ข้อมูลที่ลงทะเบียนต้องถูกต้อง เป็นปัจจุบัน และสามารถตรวจสอบได้</li><li>บริษัทสามารถขอเอกสารเพิ่มเติมและตรวจสอบข้อมูลของผู้ขายได้</li><li>ผู้ขายรับผิดชอบการรักษาความลับของบัญชีผู้ใช้งาน</li></ul><p class="mock-note">เนื้อหาตัวอย่างสำหรับต้นแบบ ไม่ใช่ข้อกำหนดทางกฎหมายจริง</p></div><label class="commitment-row"><input id="reg-coc" type="checkbox" onchange="window.portalRegCocCheck(this.checked)"><span>Accept CoC and T&amp;D <span class="required">*</span></span></label><div class="reg-actions"><button class="button primary" id="reg-coc-start" disabled onclick="window.portalRegStart()">ยอมรับและเริ่มลงทะเบียน</button></div></section>`;
   }
   function regReviewHtml() {
     const d=db.registration.data;
@@ -416,25 +469,54 @@
       if(f.t==="checkbox")return v?"ยืนยันแล้ว":"ไม่ได้เลือก";
       return v||"—";
     };
-    const block=(title,fields,data,step)=>`<section class="card section-card reg-section"><div class="section-title"><h2>${title}</h2><button class="text-link" onclick="window.portalRegGo(${step})">แก้ไข</button></div><div class="info-grid">${fields.map(f=>{const v=value(f,data);return v===null?"":info(f.label.replace(/ \(ไม่บังคับ\)$/,""),v);}).join("")}</div></section>`;
+    const block=(title,fields,data,step)=>`<section class="card reg-section"><header class="reg-section-head"><div class="reg-section-title"><h2>${title}</h2></div><button class="button" onclick="window.portalRegGo(${step})">แก้ไข</button></header><div class="info-grid">${fields.map(f=>{const v=value(f,data);return v===null?"":info(f.label.replace(/ \(ไม่บังคับ\)$/,""),v);}).join("")}</div></section>`;
     return [...REG_STEP1.map(s=>block(s.title,s.fields,d,1)),block("เอกสารสำคัญ",regDocFields(d),d,2),...db.registration.categories.map((c,i)=>block(`กลุ่มสินค้าที่ ${i+1}`,regCatFields(),c,3))].join("");
+  }
+  function regStepProgress(step) {
+    const r=db.registration, d=r.data;
+    const groups=step===1?REG_STEP1.map(s=>[s.fields,d]):step===2?[[regDocFields(d),d]]:step===3?r.categories.map(c=>[regCatFields(),c]):[];
+    let total=0, ok=0;
+    groups.forEach(([fields,data])=>fields.forEach(f=>{
+      if(!f.req||(f.show&&!f.show(data))||f.dis?.(data))return;
+      total++;if(!regFieldError(f,data))ok++;
+    }));
+    return {total,ok};
+  }
+  function regAsideHtml() {
+    const r=db.registration, d=r.data;
+    const sections=r.step===1?REG_STEP1.map((s,i)=>({id:`reg-sec-${i}`,title:s.title,done:s.fields.every(f=>!regFieldError(f,d))}))
+      :r.step===2?[{id:"reg-sec-0",title:"เอกสารสำคัญ",done:regDocFields(d).every(f=>!regFieldError(f,d))}]
+      :r.step===3?r.categories.map((c,i)=>({id:`reg-sec-${i}`,title:`กลุ่มสินค้าที่ ${i+1}`,done:regCatFields().every(f=>!regFieldError(f,c))})):[];
+    const {total,ok}=regStepProgress(r.step), pct=total?Math.round(ok/total*100):100;
+    const steps=REG_STEPS.map((name,i)=>{
+      const s=i+1, state=s===r.step?"current":s<r.step?"done":"";
+      const subs=s===r.step&&sections.length?`<ul class="reg-substeps">${sections.map(x=>`<li><button type="button" class="${x.done?"done":""}" onclick="window.portalRegScroll('${x.id}')"><span class="reg-sub-dot">${x.done?"✓":""}</span><span>${escapeHtml(x.title)}</span></button></li>`).join("")}</ul>`:"";
+      return `<li class="reg-step ${state}"><button type="button" ${s<r.step?`onclick="window.portalRegGo(${s})"`:"disabled"}><span class="reg-step-dot">${s<r.step?"✓":s}</span><span>${name}</span></button>${subs}</li>`;
+    }).join("");
+    const progress=r.step<4?`<div class="reg-progress"><div class="reg-progress-top"><span>ช่องที่จำเป็นขั้นนี้</span><strong>${ok}/${total}</strong></div><div class="progress-track"><div class="progress-fill" style="width:${pct}%"></div></div></div>`:"";
+    return `<div class="reg-aside-title">ขั้นตอนการลงทะเบียน</div><ol class="reg-steps">${steps}</ol>${progress}<p class="reg-legend"><span class="required">*</span> จำเป็นต้องกรอก · บันทึกอัตโนมัติ</p>`;
   }
   function regHtml() {
     const r=db.registration, d=r.data;
-    if(!r.cocAccepted)return `<div class="content-stack">${regCocHtml()}</div>`;
+    if(!r.cocAccepted)return `<div class="reg-coc-wrap">${regCocHtml()}</div>`;
     let body="";
-    if(r.step===1)body=REG_STEP1.map(s=>regSectionHtml("reg",s.title,s.fields,d,"",s.hint||"",s.map?`<div class="reg-map" id="reg-map">${regMapHtml(d)}</div>`:"")).join("");
-    else if(r.step===2)body=regSectionHtml("reg","เอกสารสำคัญ",regDocFields(d),d,"",d.companyType==="บุคคลธรรมดา"?"เอกสารสำหรับบุคคลธรรมดา":"เอกสารสำหรับนิติบุคคล");
-    else if(r.step===3)body=r.categories.map((c,i)=>regSectionHtml(`cat:${i}`,`กลุ่มสินค้าที่ ${i+1}`,regCatFields(),c,r.categories.length>1?`<button type="button" class="button danger" onclick="window.portalRegRemoveCat(${i})">ลบกลุ่มสินค้า</button>`:"")).join("")+`<div><button type="button" class="button" onclick="window.portalRegAddCat()">＋ เพิ่มกลุ่มสินค้า</button></div>`;
+    if(r.step===1)body=REG_STEP1.map((s,i)=>regSectionHtml("reg",s.title,s.fields,d,{num:i+1,id:`reg-sec-${i}`,hint:s.hint,after:s.map?`<div class="reg-map" id="reg-map">${regMapHtml(d)}</div>`:""})).join("");
+    else if(r.step===2)body=regSectionHtml("reg","เอกสารสำคัญ",regDocFields(d),d,{num:1,id:"reg-sec-0",hint:d.companyType==="บุคคลธรรมดา"?"เอกสารสำหรับบุคคลธรรมดา · ต้นแบบนี้เก็บเฉพาะชื่อไฟล์ในเบราว์เซอร์":"เอกสารสำหรับนิติบุคคล · ต้นแบบนี้เก็บเฉพาะชื่อไฟล์ในเบราว์เซอร์"});
+    else if(r.step===3)body=r.categories.map((c,i)=>regSectionHtml(`cat:${i}`,`กลุ่มสินค้าที่ ${i+1}`,regCatFields(),c,{num:i+1,id:`reg-sec-${i}`,extra:r.categories.length>1?`<button type="button" class="button danger" onclick="window.portalRegRemoveCat(${i})">ลบกลุ่มสินค้า</button>`:""})).join("")+`<div><button type="button" class="button" onclick="window.portalRegAddCat()">＋ เพิ่มกลุ่มสินค้า</button></div>`;
     else body=`<div class="notice">ตรวจสอบข้อมูลทั้งหมดก่อนส่ง เมื่อส่งข้อมูลแล้ว ระบบจะสร้างโปรไฟล์ผู้ขายจากข้อมูลนี้</div>${regReviewHtml()}`;
-    const steps=REG_STEPS.map((n,i)=>`<div class="wizard-step ${i+1===r.step?"current":i+1<r.step?"done":""}" ${i+1<r.step?`onclick="window.portalRegGo(${i+1})" style="cursor:pointer"`:""}><span>${i+1<r.step?"✓":i+1}</span>${n}</div>`).join("");
-    return `<div class="content-stack"><div class="card wizard-card"><div class="wizard-steps">${steps}</div></div>${body}<div class="card reg-footer">${r.step>1?'<button class="button subtle" onclick="window.portalRegStep(-1)">‹ ย้อนกลับ</button>':'<span class="mock-note">บันทึกข้อมูลอัตโนมัติในเบราว์เซอร์นี้</span>'}${r.step<4?'<button class="button primary" onclick="window.portalRegStep(1)">ต่อไป</button>':'<button class="button primary" onclick="window.portalRegSubmit()">ส่งข้อมูล</button>'}</div></div>`;
+    return `<div class="reg-layout"><aside class="card reg-aside" id="reg-aside">${regAsideHtml()}</aside><div class="reg-main">${body}<div class="card reg-footer">${r.step>1?'<button class="button" onclick="window.portalRegStep(-1)">‹ ย้อนกลับ</button>':'<span></span>'}<span class="reg-footer-note">ขั้นที่ ${r.step} จาก 4</span>${r.step<4?'<button class="button primary" onclick="window.portalRegStep(1)">ต่อไป ›</button>':'<button class="button primary" onclick="window.portalRegSubmit()">ส่งข้อมูล</button>'}</div></div></div>`;
   }
   function renderRegistration(el) {
-    el.innerHTML=heading("การลงทะเบียนข้อมูลผู้ขาย","ผู้ขายใหม่ต้องลงทะเบียนข้อมูลก่อน ระบบจึงจะสร้างโปรไฟล์ผู้ขายและเปิดงาน onboarding")+'<div id="reg-root"></div>';
+    const back='<button class="button" onclick="window.portalNav(\'Supplier Onboarding\')">← กลับไปหน้า Onboarding</button>';
+    el.innerHTML=`<div class="breadcrumbs" style="margin-bottom:11px"><button class="text-link" onclick="window.portalNav('Supplier Onboarding')">Supplier Onboarding</button> / <strong>Registration</strong></div>`+heading("การลงทะเบียนข้อมูลผู้ขาย","กรอกข้อมูลบริษัทเพื่อสร้างโปรไฟล์ผู้ขาย ระบบบันทึกอัตโนมัติ กลับมากรอกต่อได้ทุกเมื่อ",back)+'<div id="reg-root"></div>';
     rerenderReg();
   }
+  function regUpdateAside() {
+    const aside=document.getElementById("reg-aside");
+    if(aside)aside.innerHTML=regAsideHtml();
+  }
   function rerenderReg() {
+    if(siteDraft)return renderSiteModal();
     const root=document.getElementById("reg-root");
     if(!root)return;
     const y=window.scrollY;
@@ -458,6 +540,7 @@
     if(!d)return;
     d[k]=value;saveDb();
     if(regShowError(scope,k))regRefreshError(scope,k);
+    regUpdateAside();
   }
   function regSet(scope,k,value) {
     const d=regScopeData(scope), f=d&&regFieldsFor(scope,d).find(x=>x.k===k);
@@ -478,7 +561,8 @@
     regTouched.add(`${scope}|${k}`);saveDb();rerenderReg();
   }
   function regBlur(scope,k) {
-    regTouched.add(`${scope}|${k}`);regRefreshError(scope,k);
+    regTouched.add(`${scope}|${k}`);regRefreshError(scope,k);regUpdateAside();
+    if(scope==="site"&&["lat","lng","mapQuery"].includes(k)) { const map=document.getElementById("site-map"); if(map&&siteDraft)map.innerHTML=regMapHtml(siteDraft); }
     if(scope==="reg"&&["lat","lng","mapQuery"].includes(k)) { const map=document.getElementById("reg-map"); if(map)map.innerHTML=regMapHtml(db.registration.data); }
   }
   function regDatePick(scope,k) {
@@ -491,7 +575,7 @@
     d[k]=`${m[3]}-${m[2]}-${m[1]}`;
     const input=document.getElementById(regId(scope,k));
     if(input)input.value=d[k];
-    regTouched.add(`${scope}|${k}`);saveDb();regRefreshError(scope,k);
+    regTouched.add(`${scope}|${k}`);saveDb();regRefreshError(scope,k);regUpdateAside();
   }
   function regAddFiles(scope,k,files) {
     const d=regScopeData(scope), f=d&&regFieldsFor(scope,d).find(x=>x.k===k);
@@ -502,9 +586,15 @@
       if(!allowed.includes(extension)) { toast(`${file.name}: รองรับเฉพาะไฟล์ ${img?"PNG หรือ JPG":"PDF"}`);continue; }
       if(file.size>5*1024*1024) { toast(`${file.name}: ขนาดเกิน 5 MB`);continue; }
       if(current.length+added.length>=5) { toast("อัปโหลดได้สูงสุด 5 ไฟล์");break; }
-      added.push({name:file.name,size:file.size,type:file.type||extension});
+      added.push(trackFile(file,file.type||extension));
     }
     d[k]=[...current,...added];regTouched.add(`${scope}|${k}`);saveDb();rerenderReg();
+  }
+  function regFileExpiry(scope,k,index,value) {
+    const file=regScopeData(scope)?.[k]?.[index];
+    if(!file)return;
+    if(!expiryAccepted(value,"วันหมดอายุต้องไม่เป็นวันที่ผ่านมาแล้ว"))return rerenderReg();
+    file.expiry=value;saveDb();
   }
   function regRemoveFile(scope,k,index) {
     const d=regScopeData(scope);
@@ -555,9 +645,7 @@
     p.factories=[{name:d.branchType==="สาขา"?d.branchName:p.company,location:address,type:"สถานประกอบการ",status:"Pending review"}];
     p.categories=[...new Set(r.categories.map(c=>c.main))];
     p.products=r.categories.map(c=>({name:`${c.main} / ${c.sub}`,code:c.material,status:"Pending review"}));
-    regDocFields(d).filter(f=>f.t==="file"&&(!f.show||f.show(d))).forEach(f=>(d[f.k]||[]).forEach(file=>{
-      db.documents.push({id:`DOC-${String(db.documents.length+1).padStart(4,"0")}`,name:file.name,type:f.label,related:p.company,issue:today,expiry:"",status:"Pending",group:"Registration",fileName:file.name,fileType:file.type,fileSize:file.size,history:[{action:"Uploaded",date:today,version:1,fileName:file.name}]});
-    }));
+    regDocFields(d).filter(f=>f.t==="file"&&(!f.show||f.show(d))).forEach(f=>pushDocument(d[f.k]||[],{name:f.label,type:f.docType,group:"Registration"}));
     r.status="Submitted";r.submittedAt=new Date().toISOString();
     db.onboarding.selfRegistration={status:"Submitted",updated:today};
   }
@@ -569,14 +657,15 @@
     }
     if(!window.confirm("ยืนยันการส่งข้อมูลการลงทะเบียนผู้ขาย?"))return;
     applyRegistration();saveDb();regShowAll=false;regTouched.clear();
-    page="Company Profile";profileTab="Company information";render();toast("ลงทะเบียนสำเร็จ ระบบสร้างโปรไฟล์ผู้ขายแล้ว");
+    page="Supplier Onboarding";render();toast("ลงทะเบียนสำเร็จ ระบบสร้างโปรไฟล์ผู้ขายแล้ว งานอื่นพร้อมใช้งาน");
   }
   function regStart() {
     if(!document.getElementById("reg-coc")?.checked)return toast("กรุณายอมรับ CoC และ T&D");
     db.registration.cocAccepted=true;db.registration.cocAt=new Date().toISOString();saveDb();rerenderReg();
   }
   function render() {
-    if(!registrationDone()&&page!=="Supplier Registration")page="Supplier Registration";
+    if(!registrationDone()&&!["Supplier Onboarding","Supplier Registration","Help & Support"].includes(page))page="Supplier Onboarding";
+    if(registrationDone()&&page==="Supplier Registration")page="Supplier Onboarding";
     const root = document.getElementById("app");
     root.innerHTML = `<div class="shell">
       <div class="mobile-overlay" onclick="window.portalMenu(false)"></div>
@@ -584,7 +673,7 @@
         <div class="brand"><div class="brand-mark">N</div><div class="brand-name">northstar<small>Supplier portal</small></div></div>
         <div class="company-mini"><span>SUPPLIER ACCOUNT</span><strong>${escapeHtml(db.profile.company)}</strong></div>
         <div class="nav-label">Workspace</div><nav class="nav-list" aria-label="Main navigation">
-          ${(registrationDone()?[["Supplier Onboarding","✓"],["Sample Request","◫"],["Company Profile","⌂"],["Documents","▤"],["Notifications","♧"]]:[["Supplier Registration","✎"]]).map(([name,icon])=>`<button class="nav-item ${page===name||(page==="Onboarding Task"&&name==="Supplier Onboarding")?"active":""}" onclick="window.portalNav('${name}')"><span class="nav-icon">${icon}</span>${name}${name==="Sample Request"&&db.requests.some(r=>r.status==="Action Required")?'<span class="nav-count">1</span>':""}</button>`).join("")}
+          ${[["Supplier Onboarding","✓"],["Sample Request","◫"],["Company Profile","⌂"],["Notifications","♧"]].map(([name,icon])=>{const locked=!registrationDone()&&name!=="Supplier Onboarding";return `<button class="nav-item ${page===name||(["Onboarding Task","Supplier Registration"].includes(page)&&name==="Supplier Onboarding")?"active":""}" ${locked?'disabled title="ต้องลงทะเบียนผู้ขายให้สำเร็จก่อน"':`onclick="window.portalNav('${name}')"`}><span class="nav-icon">${icon}</span>${name}${name==="Sample Request"&&db.requests.some(r=>r.status==="Action Required")?'<span class="nav-count">1</span>':""}</button>`;}).join("")}
         </nav>
         <div class="sidebar-bottom">
           <div class="help-card"><strong>Need a hand?</strong><p>Our supplier support team is here to help with your onboarding.</p><button onclick="window.portalNav('Help & Support')">Contact support →</button></div>
@@ -597,18 +686,23 @@
         <div class="content" id="content"></div>
       </main><div class="toast-region" aria-live="polite"></div></div>`;
     const content = document.getElementById("content");
-    const routes = {"Supplier Registration":renderRegistration,"Supplier Onboarding":renderOnboarding,"Onboarding Task":renderOnboardingTask,"Sample Request":renderList,"Create Sample Request":renderWizard,"Sample Request Details":renderDetails,"Respond to Feedback":renderResponse,"Company Profile":renderProfile,Documents:renderDocuments,Notifications:renderNotifications,"Help & Support":renderHelp};
+    const routes = {"Supplier Registration":renderRegistration,"Supplier Onboarding":renderOnboarding,"Onboarding Task":renderOnboardingTask,"Sample Request":renderList,"Create Sample Request":renderWizard,"Sample Request Details":renderDetails,"Respond to Feedback":renderResponse,"Company Profile":renderProfile,Notifications:renderNotifications,"Help & Support":renderHelp};
     (routes[page] || renderOnboarding)(content);
   }
   function heading(title, desc, action="") { return `<div class="page-heading"><div><h1>${title}</h1><p>${desc}</p></div>${action}</div>`; }
   function metric(label,value,icon,note="") { return `<div class="card metric"><div class="metric-top">${label}<span class="metric-icon">${icon}</span></div><strong>${value}</strong><small>${note}</small></div>`; }
+  function regTaskCard() {
+    const r=db.registration, started=r.cocAccepted, pct=started?Math.round((r.step-1)/4*100):0;
+    return `<article class="task-card"><div class="task-icon">✎</div><div class="task-content"><span class="eyebrow">Registration · Required first</span><h3>Supplier Registration</h3><p>Register your company information to create your supplier profile. All other tasks and menus unlock after you submit.</p><div class="task-progress"><span>${started?`Step ${r.step} of 4`:"Not started"}</span><div class="progress-track"><div class="progress-fill" style="width:${pct}%"></div></div></div></div><button class="button primary" onclick="window.portalNav('Supplier Registration')">${started?"Continue":"Start registration"} →</button></article>`;
+  }
   function renderOnboarding(el) {
     const stages=onboardingStages();
     el.innerHTML=heading("Supplier Onboarding","Follow your supplier registration, task completion, and evaluation progress.")+
+      (registrationDone()?"":`<div class="notice warning">Start with <strong>Supplier Registration</strong> in Your tasks. The other tasks and menus unlock after your registration is submitted.</div>`)+
       `<div class="onboarding-layout"><section class="card section-card"><div class="section-title"><h2>Onboarding stages</h2>${badge("In Progress")}</div><div class="onboarding-stepper">${stages.map((s,i)=>`<div class="onboarding-stage ${s.status==="In Progress"?"stage-active":""}"><span class="stage-marker ${s.status==="Completed"?"stage-done":""}">${s.status==="Completed"?"✓":i+1}</span><div class="stage-copy"><strong>${escapeHtml(s.title)}</strong><small>${escapeHtml(s.description)}</small></div><span class="stage-state">${badge(s.status)}</span></div>`).join("")}</div></section>
-      <section class="card section-card task-section"><div class="section-title"><div><h2>Your tasks</h2><small>Activities required during supplier pre-screening.</small></div></div>${onboardingTasks.map(task=>{
+      <section class="card section-card task-section"><div class="section-title"><div><h2>Your tasks</h2><small>Activities required during supplier pre-screening.</small></div></div>${registrationDone()?"":regTaskCard()}${onboardingTasks.map(task=>{
         const done=taskCount(task.id),isRisk=task.id==="sustainability-risk",blockedMessage=taskBlockedMessage(task.id),disabled=Boolean(blockedMessage);
-        const blockedStatus=isRisk?(riskAssessmentState()==="pending"?"Pending questionnaire":"Not required"):"Pending learning";
+        const blockedStatus=!registrationDone()?"Pending registration":isRisk?(riskAssessmentState()==="pending"?"Pending questionnaire":"Not required"):"Pending learning";
         return `<article class="task-card ${disabled?"task-disabled":""}"><div class="task-icon">${task.icon}</div><div class="task-content"><span class="eyebrow">${task.category}</span><h3>${escapeHtml(task.title)}</h3><p>${escapeHtml(disabled?blockedMessage:isRisk?"Risk identified in your questionnaire. Complete this additional assessment.":task.description)}</p>${disabled?badge(blockedStatus):`<div class="task-progress"><span>Completed ${done}/${task.required}</span><div class="progress-track"><div class="progress-fill" style="width:${done/task.required*100}%"></div></div></div>`}</div><button class="button ${disabled||done>=task.required?"":"primary"}" onclick="window.portalTask('${task.id}')" ${disabled?"disabled":""}>${disabled?blockedStatus==="Not required"?"Not required":"Unavailable":done>=task.required?"Review":"View details"}${disabled?"":" →"}</button></article>`;
       }).join("")}</section></div>
       <div class="notice" style="margin-top:15px">Sample approval is a category-dependent gate only. It does not automatically mean your supplier qualification is complete. Current sample gate: ${badge(onboardingGate())}</div>`;
@@ -650,7 +744,7 @@
       const conditional=response.answer==="Yes";
       const limit=maxFiles||1;
       const documentField=Array.isArray(documents)?`<label class="form-field">Document type <select class="field-control" onchange="window.portalQuestionnaireDocument('${key}',this.value)" ${locked?"disabled":""}><option value="">Select a document type</option>${documents.map(option=>`<option value="${escapeHtml(option)}" ${response.documentType===option?"selected":""}>${escapeHtml(option)}</option>`).join("")}</select></label>`:"";
-      const uploadField=conditional?`<label class="form-field">Supporting document <span class="required">*</span><span class="helper">PDF only · maximum 5 MB per file · up to ${limit} file${limit===1?"":"s"}</span><input type="file" accept=".pdf,application/pdf" ${limit>1?"multiple":""} onchange="window.portalQuestionnaireFiles('${key}',this.files)" ${locked?"disabled":""}></label><div class="file-list">${(response.files||[]).map((file,index)=>`<div class="file-row"><span>${escapeHtml(file.name)} <small>(${(file.size/1024).toFixed(0)} KB)</small></span><button type="button" aria-label="Remove ${escapeHtml(file.name)}" onclick="window.portalQuestionnaireRemoveFile('${key}',${index})" ${locked?"disabled":""}>Remove</button></div>`).join("")}</div>`:"";
+      const uploadField=conditional?`<label class="form-field">Supporting document <span class="required">*</span><span class="helper">PDF only · maximum 5 MB per file · up to ${limit} file${limit===1?"":"s"}</span><input type="file" accept=".pdf,application/pdf" ${limit>1?"multiple":""} onchange="window.portalQuestionnaireFiles('${key}',this.files)" ${locked?"disabled":""}></label><div class="file-list">${(response.files||[]).map((file,index)=>`<div class="file-row"><span>${escapeHtml(file.name)} <small>(${(file.size/1024).toFixed(0)} KB)</small></span>${expiryField(`window.portalQuestionnaireExpiry('${key}',${index},this.value)`,file.expiry,"Expiry date",locked)}<button type="button" aria-label="Remove ${escapeHtml(file.name)}" onclick="window.portalQuestionnaireRemoveFile('${key}',${index})" ${locked?"disabled":""}>Remove</button></div>`).join("")}</div>`:"";
       const noteField=`<label class="form-field questionnaire-note">หมายเหตุ <textarea class="field-control" maxlength="5000" rows="3" oninput="window.portalQuestionnaireNote('${key}',this.value)" ${locked?"disabled":""}>${escapeHtml(response.note||"")}</textarea><small>${(response.note||"").length}/5000 characters</small></label>`;
       return `<article class="questionnaire-item"><div class="questionnaire-question"><strong>${escapeHtml(question)}</strong><span class="required">*</span></div><div class="questionnaire-answer" role="radiogroup" aria-label="${escapeHtml(question)}">${["Yes","No"].map(value=>`<label class="questionnaire-choice"><input type="radio" name="onboarding-${key}" value="${value}" ${response.answer===value?"checked":""} onchange="window.portalQuestionnaireAnswer('${key}',this.value)" ${locked?"disabled":""}><span>${value}</span></label>`).join("")}</div>${conditional?`<div class="questionnaire-conditional">${documentField}${uploadField}</div>`:""}${noteField}</article>`;
     }).join("");
@@ -780,11 +874,17 @@
       const isPdf=file.type==="application/pdf"||file.name.toLowerCase().endsWith(".pdf");
       if(!isPdf) { toast(`${file.name} is not a PDF file.`);continue; }
       if(file.size>5*1024*1024) { toast(`${file.name} exceeds the 5 MB limit.`);continue; }
-      accepted.push({name:file.name,size:file.size,type:"application/pdf"});
+      accepted.push(trackFile(file,"application/pdf"));
     }
     const remaining=limit-(response.files||[]).length;
     if(accepted.length>remaining)toast(`This question allows up to ${limit} file${limit===1?"":"s"}.`);
     response.files=[...(response.files||[]),...accepted.slice(0,Math.max(0,remaining))];saveDb();render();
+  }
+  function setQuestionnaireExpiry(key,index,value) {
+    const file=db.onboarding.questionnaireAnswers[key]?.files?.[index];
+    if(!file||taskCount("supplier-questionnaire"))return;
+    if(!expiryAccepted(value,"Expiry date cannot be in the past."))return render();
+    file.expiry=value;saveDb();
   }
   function removeQuestionnaireFile(key,index) {
     const response=db.onboarding.questionnaireAnswers[key];
@@ -801,6 +901,7 @@
     if(!questionnaireAvailable())return toast(taskBlockedMessage("supplier-questionnaire"));
     if(taskCount("supplier-questionnaire"))return toast("The questionnaire has already been submitted.");
     if(!questionnaireComplete())return toast("Answer every required question and attach the conditional PDF documents before submitting.");
+    supplierQuestionnaire.forEach(([key,question])=>{const response=db.onboarding.questionnaireAnswers[key];if(response?.answer==="Yes")pushDocument(response.files||[],{name:response.documentType||question.replace(/^\d+\.\s*/,""),type:"Questionnaire Evidence",group:"Pre-Screening"});});
     db.onboarding.tasks["supplier-questionnaire"]=1; saveDb(); render(); toast(riskAssessmentState()==="required"?"Questionnaire submitted. Risk identified: complete the Sustainability Risk Assessment.":"Questionnaire submitted. No additional risk assessment is required.");
   }
   function filteredRequests() {
@@ -847,7 +948,7 @@
   }
   function uploadField() {
     const files=form.files||[];
-    return `<div class="form-field full"><label>Attach supporting documents</label><div class="upload-box"><div class="helper">PDF, DOCX, JPG or PNG · max 10 MB per file. Attachments are simulated and remain in this browser only.</div><input type="file" multiple accept=".pdf,.docx,.jpg,.jpeg,.png" onchange="window.portalFiles(this.files)"><div class="file-list">${files.map((f,i)=>`<div class="file-row"><span>▤ &nbsp;${escapeHtml(f.name)} <small>(${(f.size/1024).toFixed(0)} KB)</small></span><button type="button" aria-label="Remove ${escapeHtml(f.name)}" onclick="window.portalRemoveFile(${i})">Remove</button></div>`).join("")}</div></div></div>`;
+    return `<div class="form-field full"><label>Attach supporting documents</label><div class="upload-box"><div class="helper">PDF, DOCX, JPG or PNG · max 10 MB per file. Attachments are simulated and remain in this browser only.</div><input type="file" multiple accept=".pdf,.docx,.jpg,.jpeg,.png" onchange="window.portalFiles(this.files)"><div class="file-list">${files.map((f,i)=>`<div class="file-row"><span>▤ &nbsp;${escapeHtml(f.name)} <small>(${(f.size/1024).toFixed(0)} KB)</small></span>${expiryField(`window.portalFileExpiry(${i},this.value)`,f.expiry)}<button type="button" aria-label="Remove ${escapeHtml(f.name)}" onclick="window.portalRemoveFile(${i})">Remove</button></div>`).join("")}</div></div></div>`;
   }
   function renderWizard(el) {
     if(!form) return renderList(el);
@@ -934,10 +1035,10 @@
     if(form.id) {
       const r=db.requests.find(x=>x.id===form.id);
       if(!r||r.status!=="Draft")return toast("This request is no longer a draft.");
-      Object.assign(r,form); transition(r,"Submitted");
+      Object.assign(r,form); transition(r,"Submitted"); addRequestDocuments(r);
     } else {
       const r=policyFields({...form,id:createRequestId(),status:"Draft",created:now,updated:now,history:[["Draft Created",new Date().toISOString()]],revisions:[]});
-      db.requests.unshift(r); transition(r,"Submitted");
+      db.requests.unshift(r); transition(r,"Submitted"); addRequestDocuments(r);
       selectedId=r.id;
     }
     saveDb(); form=null; page="Sample Request Details"; toast("Sample request submitted successfully."); render();
@@ -983,8 +1084,8 @@
     r.revisions=r.revisions||[];
     const updatedQuantity=document.getElementById("responseQuantity")?.value||"";
     const updatedDelivery=document.getElementById("responseDelivery")?.value||"";
-    r.revisions.push({date:new Date().toISOString(),comments,files:responseFiles.map(({name,size,type})=>({name,size,type})),quantity:updatedQuantity,delivery:updatedDelivery});
-    if(responseFiles.length) r.files=[...(r.files||[]),...responseFiles.map(({name,size,type})=>({name,size,type}))];
+    r.revisions.push({date:new Date().toISOString(),comments,files:responseFiles.map(({name,size,type,expiry})=>({name,size,type,expiry})),quantity:updatedQuantity,delivery:updatedDelivery});
+    if(responseFiles.length) { r.files=[...(r.files||[]),...responseFiles.map(({name,size,type,expiry})=>({name,size,type,expiry}))];addRequestDocuments(r,responseFiles); }
     if(isPhysical(r.type)) {
       if(updatedQuantity) r.quantity=updatedQuantity;
       if(updatedDelivery) r.instructions=updatedDelivery;
@@ -1006,35 +1107,105 @@
     let panel="";
     if(profileTab==="Company information") panel=`<h2>Company information ${profileEditMode?"":'<button class="button" onclick="window.portalProfileEdit(true)">Edit information</button>'}</h2>${profileEditMode?profileEntryForm("company",[["company","Supplier company",p.company],["registration","Registration number",p.registration],["contact","Company owner / primary contact",p.contact],["email","Business email",p.email,"email"],["phone","Phone",p.phone,"tel"],["site","Registered address",p.site]],"Save changes"):`<div class="info-grid">${info("Supplier company",p.company)}${info("Supplier ID",p.id)}${info("Registration number",p.registration)}${info("Company owner / primary contact",p.contact)}${info("Email",p.email)}${info("Phone",p.phone)}${info("Registered address",p.site)}${info("Product categories",p.categories.join(", "))}</div>`}`;
     if(profileTab==="Contacts") panel=`<h2>Contact persons <button class="button" onclick="window.portalProfileEntry('contact')">＋ Add contact</button></h2>${profileEntryMode==="contact"?profileEntryForm("contact",[["type","Contact type","Contact person",["Company owner","Contact person","Factory / manufacturer contact"]],["name","Contact name",""],["role","Role / position",""],["email","Business email","","email"],["phone","Phone number","","tel"]],"Add contact"): ""}<div class="table-wrap"><table><thead><tr><th>Contact type</th><th>Name</th><th>Role</th><th>Email</th><th>Phone</th><th>Status</th></tr></thead><tbody>${p.contacts.map((c,i)=>`<tr><td>${escapeHtml(c.type||(i===0?"Company owner":"Contact person"))}</td><td><strong>${escapeHtml(c.name)}</strong></td><td>${escapeHtml(c.role)}</td><td>${escapeHtml(c.email)}</td><td>${escapeHtml(c.phone)}</td><td>${badge(c.status)}</td></tr>`).join("")}</tbody></table></div>`;
-    if(profileTab==="Manufacturing sites") panel=`<h2>Manufacturing sites <button class="button" onclick="window.portalProfileEntry('site')">＋ Add site</button></h2>${profileEntryMode==="site"?profileEntryForm("site",[["name","Site / facility name",""],["location","Address or location",""],["type","Site type","Manufacturing"]],"Add site"): ""}<div class="table-wrap"><table><thead><tr><th>Site name</th><th>Location</th><th>Site type</th><th>Status</th></tr></thead><tbody>${p.factories.map(f=>`<tr><td><strong>${escapeHtml(f.name)}</strong></td><td>${escapeHtml(f.location)}</td><td>${escapeHtml(f.type)}</td><td>${badge(f.status)}</td></tr>`).join("")}</tbody></table></div>`;
-    if(profileTab==="Important documents") panel=`<h2>Important company documents</h2>${documentRows(db.documents.filter(d=>d.group!=="Sample Request"))}<button class="text-link" style="margin-top:14px" onclick="window.portalNav('Documents')">View all documents →</button>`;
+    if(profileTab==="Manufacturing sites") panel=`<h2>Manufacturing sites <button class="button" onclick="window.portalSiteOpen()">＋ เพิ่มข้อมูลโรงงาน</button></h2><div class="table-wrap"><table><thead><tr><th>ลำดับ</th><th>ชื่อโรงงานผู้ผลิตสินค้า</th><th>ที่อยู่</th><th>พิกัด (ละติจูด, ลองจิจูด)</th><th>Status</th></tr></thead><tbody>${p.factories.map((f,i)=>`<tr><td>${i+1}</td><td><strong>${escapeHtml(f.name)}</strong></td><td>${escapeHtml(f.location||[f.address,f.subdistrict,f.district,f.province,f.postal,f.country].filter(Boolean).join(" "))}</td><td>${f.lat&&f.lng?`${escapeHtml(f.lat)}, ${escapeHtml(f.lng)}`:"—"}</td><td>${badge(f.status)}</td></tr>`).join("")}</tbody></table></div>`;
+    if(profileTab==="Important documents") panel=importantDocumentsPanel();
     if(profileTab==="Products") panel=`<h2>Registered product categories</h2><div class="table-wrap"><table><thead><tr><th>Category</th><th>Reference</th><th>Sample requirement</th><th>Status</th></tr></thead><tbody>${p.products.map(x=>`<tr><td><strong>${escapeHtml(x.name)}</strong></td><td>${escapeHtml(x.code)}</td><td>${needsSample(x.name)?"Sample approval may be required":"Not required"}</td><td>${badge(x.status)}</td></tr>`).join("")}</tbody></table></div>`;
     if(profileTab==="Risk assessment") panel=`<h2>Sustainability risk assessment</h2>${riskAssessmentState()!=="required"?`<div class="table-empty"><div class="empty-icon">◈</div><h3>${riskAssessmentState()==="pending"?"Pending questionnaire":"Assessment not required"}</h3><p>${escapeHtml(riskAssessmentMessage())}</p><button class="button" disabled>Assessment unavailable</button></div>`:taskCount("sustainability-risk")?`<div class="table-wrap"><table><thead><tr><th>Risk area</th><th>Supplier response</th><th>Assessment status</th></tr></thead><tbody>${riskTopics.map(([key,label])=>`<tr><td><strong>${escapeHtml(label)}</strong></td><td>${escapeHtml(db.onboarding.riskAnswers[key]||"Not answered")}</td><td>${badge("Completed")}</td></tr>`).join("")}</tbody></table></div>`:'<div class="table-empty"><div class="empty-icon">◈</div><h3>Assessment not submitted</h3><p>Complete the sustainability risk assessment task to see your saved responses.</p><button class="button primary" onclick="window.portalTask(\'sustainability-risk\')">Start assessment</button></div>'}`;
     el.innerHTML=heading("Company Profile","Your supplier account information is linked to your onboarding record.")+
       `<div class="card profile-banner"><div class="avatar">AS</div><div><h2>${escapeHtml(p.company)}</h2><p>Supplier ID ${escapeHtml(p.id)} · ${escapeHtml(p.site)}</p></div>${badge("Verified")}</div>
       <div class="profile-tabs" role="tablist">${tabs.map(tab=>`<button class="profile-tab ${profileTab===tab?"selected":""}" role="tab" aria-selected="${profileTab===tab}" onclick="window.portalProfileTab('${tab}')">${tab}</button>`).join("")}</div>
-      <div class="card detail-section profile-tab-content">${panel}<div class="notice" style="margin:18px 0 0">Profile changes and new records are saved in this browser for demonstration only; they are not submitted for approval.</div></div>`;
+      <div class="card detail-section profile-tab-content">${panel}<div class="notice" style="margin:18px 0 0">Profile changes and new records are saved in this browser for demonstration only; they are not submitted for approval.</div></div><div id="site-modal-root">${siteDraft?siteModalHtml():""}</div><div id="doc-modal-root">${previewDoc?docModalHtml():""}</div>`;
   }
-  function documentRows(documents) {
-    if(!documents.length)return '<p class="mock-note">No documents in this section.</p>';
-    return `<div class="table-wrap"><table><thead><tr><th>Document name</th><th>Type</th><th>Related to</th><th>Expiry</th><th>Status</th></tr></thead><tbody>${documents.map(d=>`<tr><td><strong>${escapeHtml(d.name)}</strong></td><td>${escapeHtml(d.type)}</td><td>${escapeHtml(d.related)}</td><td>${fmtDate(d.expiry==="—"?"":d.expiry)}</td><td>${badge(d.status)}</td></tr>`).join("")}</tbody></table></div>`;
+  function siteModalHtml() {
+    const field=k=>regFieldHtml("site",SITE_FIELDS.find(f=>f.k===k),siteDraft);
+    return `<div class="modal-overlay" onclick="if(event.target===this)window.portalSiteClose()"><div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="site-modal-title"><button type="button" class="modal-close" aria-label="ปิด" onclick="window.portalSiteClose()">×</button><div class="modal-body"><h2 id="site-modal-title">ที่อยู่โรงงานผู้ผลิตสินค้า</h2><div class="reg-grid">${["name","country","address","province","district","subdistrict","postal"].map(field).join("")}</div><h3 class="modal-subtitle">พิกัดที่ตั้งโรงงานผู้ผลิตสินค้า</h3><p class="modal-hint">กรุณาระบุตำแหน่งที่ตั้งโรงงานผู้ผลิตสินค้าของคุณ</p><div class="reg-grid">${["lat","lng","mapQuery"].map(field).join("")}</div><div class="reg-map" id="site-map">${regMapHtml(siteDraft)}</div></div><div class="modal-footer"><button type="button" class="button" onclick="window.portalSiteClose()">ย้อนกลับ</button><button type="button" class="button primary" onclick="window.portalSiteSave()">บันทึก</button></div></div></div>`;
   }
+  function renderSiteModal() {
+    const root=document.getElementById("site-modal-root");
+    if(!root)return;
+    const scroll=root.querySelector(".modal-body")?.scrollTop||0;
+    root.innerHTML=siteDraft?siteModalHtml():"";
+    const body=root.querySelector(".modal-body");
+    if(body)body.scrollTop=scroll;
+  }
+  function openSiteModal() {
+    siteDraft={country:"ไทย"};regShowAll=false;regTouched.clear();
+    renderSiteModal();
+    document.getElementById(regId("site","name"))?.focus();
+  }
+  function closeSiteModal() {
+    siteDraft=null;regShowAll=false;regTouched.clear();renderSiteModal();
+  }
+  function saveSite() {
+    const d=siteDraft;
+    if(!d)return;
+    if(SITE_FIELDS.some(f=>regFieldError(f,d))) {
+      regShowAll=true;renderSiteModal();
+      document.querySelector("#site-modal-root .has-error input, #site-modal-root .has-error select")?.focus();
+      return toast("กรุณากรอกข้อมูลที่จำเป็นให้ครบถ้วนและถูกต้อง");
+    }
+    db.profile.factories.push({name:d.name.trim(),country:d.country,address:d.address.trim(),province:d.province,district:d.district,subdistrict:d.subdistrict,postal:d.postal,lat:d.lat.trim(),lng:d.lng.trim(),mapQuery:(d.mapQuery||"").trim(),location:[d.address.trim(),d.subdistrict,d.district,d.province,d.postal,d.country].join(" "),type:"Manufacturing",status:"Pending review"});
+    siteDraft=null;regShowAll=false;regTouched.clear();saveDb();render();toast("เพิ่มข้อมูลโรงงานเรียบร้อยแล้ว");
+  }
+  function importantDocumentsPanel() {
+    const tabs=["All","Under Review","Approved","Expiring Soon","Expired","Required"];
+    const rows=db.documents.filter(doc=>documentFilter==="All"||documentStatus(doc)===documentFilter);
+    return `<h2>Important company documents <button class="button" onclick="window.portalAddDocument()">＋ Add document</button></h2><div class="document-tabs" role="tablist">${tabs.map(tab=>`<button class="document-tab ${documentFilter===tab?"selected":""}" role="tab" aria-selected="${documentFilter===tab}" onclick="window.portalDocumentFilter('${tab}')">${tab}<span>${tab==="All"?db.documents.length:db.documents.filter(d=>documentStatus(d)===tab).length}</span></button>`).join("")}</div><div class="table-wrap"><table><thead><tr><th>Document name</th><th>Upload source</th><th>Document type</th><th>Latest upload</th><th>Expiry</th><th>Status</th><th>Actions</th></tr></thead><tbody>${rows.map(d=>{const i=db.documents.indexOf(d),count=docVersions(d).length;return `<tr><td><strong>${escapeHtml(d.name)}</strong>${count?`<small>${count} version${count===1?"":"s"}</small>`:""}</td><td>${escapeHtml(docSource(d))}</td><td>${escapeHtml(d.type)}</td><td>${fmtDate(latestUpload(d))}</td><td>${fmtDate(d.expiry==="—"?"":d.expiry)}</td><td>${badge(documentStatus(d))}</td><td>${count?`<button class="text-link" onclick="window.portalDocPreview(${i})">View</button>`:`<button class="text-link" onclick="window.portalDocUploadVersion(${i})">Upload</button>`}</td></tr>`;}).join("")}</tbody></table>${rows.length?"":'<div class="table-empty"><div class="empty-icon">▤</div><h3>No documents in this category</h3><p>There are currently no matching supplier documents.</p></div>'}</div><div class="table-footer"><span>Showing ${rows.length} of ${db.documents.length} supplier documents</span><span>Mock document records</span></div>`;
+  }
+  function docViewHtml(doc) {
+    const i=db.documents.indexOf(doc), versions=docVersions(doc);
+    if(!versions.length)return '<div class="table-empty"><div class="empty-icon">▤</div><h3>No file uploaded yet</h3><p>Upload a file to start this document\'s history.</p></div>';
+    const vi=Math.min(previewDoc.v,versions.length-1), version=versions[vi], fi=Math.min(previewDoc.f,version.files.length-1), file=version.files[fi], isCurrent=vi===versions.length-1;
+    const expiryText=files=>{const e=files.map(f=>f.expiry).filter(Boolean).sort()[0];return e?`Expires ${fmtDate(e)}`:"No expiry";};
+    const chips=version.files.length>1?`<div class="preview-files">${version.files.map((f,n)=>`<button type="button" class="document-tab ${n===fi?"selected":""}" onclick="window.portalDocPreview(${i},${vi},${n})">${escapeHtml(f.name)}</button>`).join("")}</div>`:"";
+    return `<div class="doc-modal-grid"><div class="doc-preview-pane">${isCurrent?"":`<div class="notice warning" style="margin:0 0 10px">You are viewing an older version. <button type="button" class="text-link" onclick="window.portalDocPreview(${i})">Back to current version</button></div>`}<div class="preview-caption"><strong>${escapeHtml(file.name)}</strong><small>Version ${version.version} · ${file.size?`${(file.size/1024).toFixed(0)} KB · `:""}${file.expiry?`expires ${fmtDate(file.expiry)}`:"no expiry"}</small></div>${chips}${docPreviewHtml(doc,file)}</div>
+      <aside class="doc-side"><h3>Details</h3><div class="info-grid">${info("Document type",doc.type)}${info("Upload source",docSource(doc))}${info("Related to",doc.related)}${info("Latest upload",fmtDate(latestUpload(doc)))}${info("Expiry date",fmtDate(doc.expiry==="—"?"":doc.expiry))}${info("Versions",String(versions.length))}</div><h3>Upload history</h3><div class="version-list">${versions.map((v,n)=>[v,n]).reverse().map(([v,n])=>`<button type="button" class="version-item ${n===vi?"selected":""}" aria-pressed="${n===vi}" onclick="window.portalDocPreview(${i},${n},0)"><span class="version-dot"></span><span><strong>Version ${v.version}${n===versions.length-1?badge("Current"):""}</strong><small>Uploaded ${fmtDate(v.date)} · ${v.files.length} file${v.files.length===1?"":"s"} · ${expiryText(v.files)}</small></span></button>`).join("")}</div></aside></div>`;
+  }
+  const wmTime=()=>{
+    const p=Object.fromEntries(new Intl.DateTimeFormat("en-GB",{timeZone:"Asia/Bangkok",day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).formatToParts(new Date()).map(x=>[x.type,x.value]));
+    return `${p.day}/${p.month}/${p.year} ${p.hour}:${p.minute} (ICT)`;
+  };
+  function docPreviewHtml(doc,file) {
+    const url=filePreviews.get(file.uid), ext=file.name.split(".").pop().toLowerCase();
+    const stamp=`<div class="wm-stamp"><span class="wm-copy">Copy</span><small>Copied and published by<br>${escapeHtml(COMPANY.email)}<br>${wmTime()}</small></div>`;
+    const content=url&&["png","jpg","jpeg"].includes(ext)?`<img class="preview-media" src="${url}" alt="Preview of ${escapeHtml(file.name)}">`
+      :url&&ext==="pdf"?`<iframe class="preview-media" title="Preview of ${escapeHtml(file.name)}" src="${url}#toolbar=0&navpanes=0"></iframe>`
+      :`<div class="preview-paper"><h3>${escapeHtml(file.name)}</h3><p>${escapeHtml(doc.type)} · ${escapeHtml(docSource(doc))}</p>${Array.from({length:9},(_,i)=>`<span style="width:${i%4===3?"62%":"100%"}"></span>`).join("")}</div>`;
+    return `<div class="preview-stage">${content}<div class="wm-layer" aria-hidden="true">${stamp.repeat(6)}</div></div>${url?"":'<p class="mock-note">Mock preview: the original file content is only available in the session where it was uploaded, and seeded records have no file.</p>'}`;
+  }
+  function docModalHtml() {
+    const doc=previewDoc.doc===null?null:db.documents[previewDoc.doc], uploading=Boolean(pendingMeta);
+    if(previewDoc.doc!==null&&!doc)return "";
+    const i=db.documents.indexOf(doc);
+    const head=uploading?`<div class="doc-modal-head"><div><h2 id="doc-modal-title">${pendingMeta.fixed?`Upload new version · ${escapeHtml(pendingMeta.name)}`:"Add document"}</h2><p class="modal-hint">${pendingMeta.fixed?"The current version stays in the upload history.":"Use an existing document name to add a new version; earlier uploads stay in that document's history."}</p></div></div>`
+      :`<div class="doc-modal-head"><div><h2 id="doc-modal-title">${escapeHtml(doc.name)}</h2><p class="modal-hint">${escapeHtml(doc.type)} · ${escapeHtml(docSource(doc))}</p></div>${badge(documentStatus(doc))}<button type="button" class="button" onclick="window.portalDocUploadVersion(${i})">＋ Upload new version</button></div>`;
+    const footer=uploading?'<button type="button" class="button" onclick="window.portalPendingCancel()">Cancel</button><button type="button" class="button primary" onclick="window.portalPendingSave()">Save</button>':'<button type="button" class="button" onclick="window.portalDocPreviewClose()">Close</button>';
+    return `<div class="modal-overlay" onclick="if(event.target===this&&!${uploading})window.portalDocPreviewClose()"><div class="modal-dialog preview-dialog" role="dialog" aria-modal="true" aria-labelledby="doc-modal-title"><button type="button" class="modal-close" aria-label="Close" onclick="window.portalDocPreviewClose()">×</button><div class="modal-body">${head}${uploading?docUploadFormHtml():docViewHtml(doc)}</div><div class="modal-footer">${footer}</div></div></div>`;
+  }
+  function renderDocModal() {
+    const root=document.getElementById("doc-modal-root");
+    if(!root)return;
+    const scroll=root.querySelector(".modal-body")?.scrollTop||0;
+    root.innerHTML=previewDoc?docModalHtml():"";
+    const body=root.querySelector(".modal-body");
+    if(body)body.scrollTop=scroll;
+  }
+  function closeDocModal() { previewDoc=null;pendingMeta=null;pendingDocs=[];renderDocModal(); }
   function documentStatus(doc) {
     if(doc.status==="Required")return "Required";
-    if(doc.expiry&&doc.expiry!=="—"&&new Date(`${doc.expiry}T23:59:59`)<new Date())return "Expired";
+    const expiry=expiryState(doc);
+    if(expiry)return expiry;
     if(doc.status==="Expiring Soon")return "Expiring Soon";
     if(doc.status==="Pending")return "Under Review";
     return "Approved";
   }
-  function renderDocuments(el) {
-    const tabs=["All","Under Review","Approved","Expiring Soon","Expired","Required"];
-    const rows=db.documents.filter(doc=>documentFilter==="All"||documentStatus(doc)===documentFilter);
-    const selected=Number.isInteger(selectedDocument)?db.documents[selectedDocument]:null;
-    const previewUrl=selected?documentPreviews.get(selected.id):null;
-    const preview=previewUrl&&selected.fileType?.startsWith("image/")?`<img src="${previewUrl}" alt="Local preview of ${escapeHtml(selected.name)}" style="display:block;max-width:100%;max-height:430px;margin:14px auto;border:1px solid var(--line);border-radius:6px">`:previewUrl&&selected.fileType==="application/pdf"?`<iframe title="Local PDF preview" src="${previewUrl}" style="display:block;width:100%;height:420px;margin-top:14px;border:1px solid var(--line);border-radius:6px"></iframe>`:`<div class="notice" style="margin-top:14px">Preview is unavailable for this seeded document. Newly selected PDF and image files can be previewed in this browser session only.</div>`;
-    const detail=selected?`<div class="card detail-section"><div class="section-title"><h2>${escapeHtml(selected.name)}</h2><button class="button" onclick="window.portalDocInfo(null)">Close</button></div><div class="info-grid">${info("Document type",selected.type)}${info("Related to",selected.related)}${info("Issue date",fmtDate(selected.issue))}${info("Expiry date",fmtDate(selected.expiry==="—"?"":selected.expiry))}${info("Current status",documentStatus(selected))}${info("File name",selected.fileName||"Metadata-only demo record")}</div>${preview}<h3 style="margin-top:18px">Upload history</h3>${(selected.history||[]).length?`<div class="activity-list">${selected.history.slice().reverse().map(entry=>`<div class="activity"><span class="activity-dot"></span><div><strong>${escapeHtml(entry.action)} · Version ${entry.version}</strong><small>${fmtDate(entry.date)} · ${escapeHtml(entry.fileName||selected.name)}</small></div></div>`).join("")}</div>`:'<p class="mock-note">No upload history is recorded for this seeded example.</p>'}</div>`:"";
-    el.innerHTML=heading("Documents","Track required supplier, factory, and product documents.",'<button class="button" onclick="window.portalAddDocument()">＋ Add document</button>')+
-      `<input id="supplier-document-upload" type="file" multiple accept=".pdf,.docx,.jpg,.jpeg,.png" hidden onchange="window.portalDocumentFiles(this.files)"><div class="notice">Selected files are represented by local metadata only; this prototype does not store, upload, preview, or verify file contents.</div>${detail}<div class="document-tabs" role="tablist">${tabs.map(tab=>`<button class="document-tab ${documentFilter===tab?"selected":""}" role="tab" aria-selected="${documentFilter===tab}" onclick="window.portalDocumentFilter('${tab}')">${tab}<span>${tab==="All"?db.documents.length:db.documents.filter(d=>documentStatus(d)===tab).length}</span></button>`).join("")}</div><div class="card table-card"><div class="table-wrap"><table><thead><tr><th>Document name</th><th>Document type</th><th>Related to</th><th>Last updated</th><th>Status</th><th>Actions</th></tr></thead><tbody>${rows.map(d=>`<tr><td><strong>${escapeHtml(d.name)}</strong></td><td>${escapeHtml(d.type)}<small>${escapeHtml(d.group||"Registration")}</small></td><td>${escapeHtml(d.related)}</td><td>${fmtDate(d.issue)}</td><td>${badge(documentStatus(d))}</td><td><button class="text-link" onclick="window.portalDocInfo(${db.documents.indexOf(d)})">View details →</button></td></tr>`).join("")}</tbody></table>${rows.length?"":'<div class="table-empty"><div class="empty-icon">▤</div><h3>No documents in this category</h3><p>There are currently no matching supplier documents.</p></div>'}</div><div class="table-footer"><span>Showing ${rows.length} of ${db.documents.length} supplier documents</span><span>Mock document records</span></div></div>`;
+  const DOC_TYPES=["Company Registration","Tax Documentation","Identity Document","Site Photos","Quality Certification","Factory Documentation","Insurance Certificate","Supplier Declaration","Product Evidence","Questionnaire Evidence","Other"];
+  function docUploadFormHtml() {
+    const fixed=pendingMeta.fixed, match=findDocByName(pendingMeta.name,pendingMeta.type);
+    const typeOptions=[...new Set([...DOC_TYPES,...db.documents.map(d=>d.type)])];
+    return `<div class="form-grid" style="align-items:start"><div class="form-field"><label for="pending-name">Document name${fixed?"":' <span class="required">*</span>'}</label><input class="field-control" id="pending-name" type="text" autocomplete="off" value="${escapeHtml(pendingMeta.name)}" placeholder="Enter the document name" ${fixed?"disabled":""} oninput="window.portalPendingMeta('name',this.value)" onchange="window.portalPendingSync()"></div><div class="form-field"><label for="pending-type">Document type${fixed?"":' <span class="required">*</span>'}</label><select class="field-control" id="pending-type" ${fixed?"disabled":""} onchange="window.portalPendingMeta('type',this.value);window.portalPendingSync()"><option value="">Select a document type</option>${typeOptions.map(t=>`<option ${t===pendingMeta.type?"selected":""}>${escapeHtml(t)}</option>`).join("")}</select></div></div><small class="helper" id="pending-hint" style="display:block;min-height:15px;margin-top:6px">${match&&!fixed?"This document already exists, so the file will be saved as a new version.":""}</small>
+      <label class="doc-drop" style="margin-top:14px"><input type="file" multiple accept=".pdf,.docx,.jpg,.jpeg,.png" aria-label="Choose files" onchange="window.portalDocumentFiles(this.files)"><span class="doc-drop-icon">↑</span><span><b>Drag files here or <u>choose files</u></b><br><small>PDF, DOCX, JPG or PNG · max 10 MB per file</small></span></label>
+      ${pendingDocs.length?`<p class="mock-note" style="margin:12px 0 4px">Enter each file's expiry date so the system knows when it expires. Leave it blank if it does not expire.</p><div class="file-list">${pendingDocs.map((p,i)=>`<div class="file-row"><span class="file-ico">${escapeHtml(p.name.split(".").pop().toUpperCase().slice(0,4))}</span><span class="file-name">${escapeHtml(p.name)}<small>${(p.size/1024).toFixed(0)} KB</small></span><button type="button" onclick="window.portalPendingRemove(${i})">Remove</button>${expiryField(`window.portalPendingExpiry(${i},this.value)`,p.expiry)}</div>`).join("")}</div>`:""}`;
   }
   function renderNotifications(el) {
     const notes=db.requests.filter(r=>["Action Required","Resubmission Required","Approved","Rejected","Under Review"].includes(r.status)).sort((a,b)=>b.updated.localeCompare(a.updated));
@@ -1053,30 +1224,47 @@
     page="Sample Request Details"; render();
   }
   function addDocument() {
-    document.getElementById("supplier-document-upload")?.click();
+    previewDoc={doc:null,v:0,f:0};pendingMeta={name:"",type:"",fixed:false};pendingDocs=[];renderDocModal();
+    document.getElementById("pending-name")?.focus();
+  }
+  function uploadDocumentVersion(index) {
+    const doc=db.documents[index];
+    if(!doc)return;
+    previewDoc={doc:index,v:Math.max(0,docVersions(doc).length-1),f:0};pendingMeta={name:doc.name,type:doc.type,fixed:true};pendingDocs=[];renderDocModal();
+  }
+  function syncPendingMeta() {
+    const hint=document.getElementById("pending-hint");
+    if(!hint||!pendingMeta)return;
+    hint.textContent=pendingMeta.fixed||!findDocByName(pendingMeta.name,pendingMeta.type)?"":"This document already exists, so the file will be saved as a new version.";
   }
   function addDocumentFiles(files) {
-    const allowed=["pdf","docx","jpg","jpeg","png"], today=new Date().toISOString().slice(0,10);
-    const selected=Array.from(files||[]);
+    if(!pendingMeta)return;
+    const allowed=["pdf","docx","jpg","jpeg","png"];
     let added=0;
-    for(const file of selected) {
+    for(const file of Array.from(files||[])) {
       const extension=file.name.split(".").pop().toLowerCase();
       if(file.size>10*1024*1024) { toast(`${file.name} exceeds the 10 MB limit.`); continue; }
       if(!allowed.includes(extension)) { toast(`${file.name} is not a supported document type.`); continue; }
-      const index=db.documents.length+1, id=`DOC-${String(index).padStart(4,"0")}`;
-      const mime=file.type||(extension==="pdf"?"application/pdf":extension==="png"?"image/png":extension==="jpg"||extension==="jpeg"?"image/jpeg":"application/vnd.openxmlformats-officedocument.wordprocessingml.document");
-      db.documents.push({id,name:file.name,type:"Supplier Document",related:db.profile.company,issue:today,expiry:"",status:"Pending",group:"Registration",fileName:file.name,fileType:mime,fileSize:file.size,history:[{action:"Uploaded",date:today,version:1,fileName:file.name}]});
-      if(mime==="application/pdf"||mime.startsWith("image/"))documentPreviews.set(id,URL.createObjectURL(file));
+      pendingDocs.push(trackFile(file,file.type||extension));
       added++;
     }
-    if(!added)return;
-    selectedDocument=null;saveDb();render();toast(`${added} mock document record${added===1?"":"s"} added. File contents were not saved.`);
+    if(added)renderDocModal();
+  }
+  function savePendingDocuments() {
+    if(!pendingMeta)return;
+    const name=pendingMeta.name.trim(), type=pendingMeta.type, match=findDocByName(name,type);
+    if(!name)return toast("Enter a document name.");
+    if(!type)return toast("Select a document type.");
+    if(!pendingDocs.length)return toast("Choose at least one file.");
+    const doc=pushDocument(pendingDocs,{name:match?match.name:name,type,group:"Manual"}), versions=docVersions(doc).length;
+    pendingDocs=[];pendingMeta=null;previewDoc={doc:db.documents.indexOf(doc),v:versions-1,f:0};saveDb();render();
+    toast(versions>1?`Version ${versions} of “${doc.name}” saved. Earlier uploads are kept in the history.`:`“${doc.name}” added. File contents were not saved.`);
   }
   function showProfileTab(tab) {
     if(!["Company information","Contacts","Manufacturing sites","Important documents","Products","Risk assessment"].includes(tab))return;
-    profileTab=tab;profileEntryMode=null;profileEditMode=false;render();
+    profileTab=tab;profileEntryMode=null;profileEditMode=false;siteDraft=null;previewDoc=null;pendingDocs=[];pendingMeta=null;regShowAll=false;regTouched.clear();render();
   }
-  function profileEntry(kind) { if(!["contact","site"].includes(kind))return;profileEntryMode=kind;profileEditMode=false;render(); }
+  function profileEntry(kind) { if(kind!=="contact")return;profileEntryMode=kind;profileEditMode=false;render(); }
   function profileEdit(enabled) { profileEditMode=Boolean(enabled);profileEntryMode=null;render(); }
   function profileCancel() { profileEntryMode=null;profileEditMode=false;render(); }
   function saveProfile(event,kind) {
@@ -1090,15 +1278,11 @@
       db.profile.contacts.push({type:String(values.type),name:String(values.name).trim(),role:String(values.role).trim(),email:String(values.email).trim(),phone:String(values.phone).trim(),status:"Pending review"});
       if(values.type==="Company owner")Object.assign(db.profile,{contact:String(values.name).trim(),email:String(values.email).trim(),phone:String(values.phone).trim()});
       profileEntryMode=null;
-    } else if(kind==="site") {
-      db.profile.factories.push({name:String(values.name).trim(),location:String(values.location).trim(),type:String(values.type).trim(),status:"Pending review"});
-      profileEntryMode=null;
     } else return false;
     saveDb();render();toast("Profile information saved locally for this prototype.");return false;
   }
-  function docInfo(index) { selectedDocument=Number.isInteger(index)?index:null;render(); }
   function menu(open) { document.querySelector(".sidebar")?.classList.toggle("open",open); document.querySelector(".mobile-overlay")?.classList.toggle("show",open); }
-  function nav(name) { page=name; menu(false); render(); }
+  function nav(name) { page=name; pendingDocs=[]; pendingMeta=null; previewDoc=null; menu(false); render(); }
   function setForm(key,value) { if(form){form[key]=value; if(["category","type"].includes(key))render();} }
   function setStep(delta) {
     if(delta>0&&!validateStep(wizardStep))return;
@@ -1112,16 +1296,20 @@
       if(file.size>10*1024*1024) { toast(`${file.name} exceeds the 10 MB limit.`); continue; }
       const extension=file.name.split(".").pop().toLowerCase();
       if(!allowed.includes(file.type)&&!["pdf","docx","jpg","jpeg","png"].includes(extension)) { toast(`${file.name} is not a supported file type.`); continue; }
-      valid.push({name:file.name,size:file.size,type:file.type||extension});
+      valid.push(trackFile(file,file.type||extension));
     }
     if(target==="form") { form.files=[...(form.files||[]),...valid];render(); }
-    else { responseFiles=[...responseFiles,...valid]; const root=document.getElementById("response-file-list"); if(root)root.innerHTML=responseFiles.map((f,i)=>`<div class="file-row">${escapeHtml(f.name)} <small>${(f.size/1024).toFixed(0)} KB</small><button onclick="window.portalRemoveResponseFile(${i})">Remove</button></div>`).join(""); }
+    else { responseFiles=[...responseFiles,...valid];renderResponseFiles(); }
+  }
+  function renderResponseFiles() {
+    const root=document.getElementById("response-file-list");
+    if(root)root.innerHTML=responseFiles.map((f,i)=>`<div class="file-row"><span>▤ &nbsp;${escapeHtml(f.name)} <small>(${(f.size/1024).toFixed(0)} KB)</small></span>${expiryField(`window.portalResponseExpiry(${i},this.value)`,f.expiry)}<button type="button" onclick="window.portalRemoveResponseFile(${i})">Remove</button></div>`).join("");
   }
   function resetDemo() {
     if(!window.confirm("Reset all supplier portal changes in this browser and reload the fictional demo data?"))return;
     try { localStorage.removeItem("northstar-supplier-portal-v1"); }
     catch(error) { console.error("Unable to reset saved supplier portal data.",error); toast("Could not clear saved demo data in this browser."); return; }
-    db=structuredClone(initial); filters={search:"",status:"All statuses",category:"All categories",type:"All types",date:"Any date"};form=null;profileEditMode=false;profileEntryMode=null;selectedDocument=null;profileTab="Company information";documentFilter="All";for(const preview of documentPreviews.values())URL.revokeObjectURL(preview);documentPreviews.clear();regTouched.clear();regShowAll=false;page="Supplier Onboarding";render();toast("Demo data reset.");
+    db=structuredClone(initial); filters={search:"",status:"All statuses",category:"All categories",type:"All types",date:"Any date"};form=null;profileEditMode=false;profileEntryMode=null;siteDraft=null;pendingDocs=[];pendingMeta=null;previewDoc=null;profileTab="Company information";documentFilter="All";for(const preview of filePreviews.values())URL.revokeObjectURL(preview);filePreviews.clear();regTouched.clear();regShowAll=false;page="Supplier Onboarding";render();toast("Demo data reset.");
   }
 
   window.portalNav=nav;
@@ -1164,16 +1352,33 @@
   window.portalRemoveFile=i=>{form.files.splice(i,1);render();};
   window.portalResponseField=(key,value)=>{const el=document.getElementById(`response-${key}`);el?.parentElement.classList.remove("has-error");};
   window.portalResponseFiles=files=>addFiles(files,"response");
-  window.portalRemoveResponseFile=i=>{responseFiles.splice(i,1);const root=document.getElementById("response-file-list");if(root)root.innerHTML=responseFiles.map((f,n)=>`<div class="file-row">${escapeHtml(f.name)} <small>${(f.size/1024).toFixed(0)} KB</small><button onclick="window.portalRemoveResponseFile(${n})">Remove</button></div>`).join("");};
+  window.portalRemoveResponseFile=i=>{responseFiles.splice(i,1);renderResponseFiles();};
+  window.portalResponseExpiry=(i,value)=>{const f=responseFiles[i];if(!f)return;if(!expiryAccepted(value,"Expiry date cannot be in the past."))return renderResponseFiles();f.expiry=value;};
+  window.portalFileExpiry=(i,value)=>{const f=form?.files?.[i];if(!f)return;if(!expiryAccepted(value,"Expiry date cannot be in the past."))return render();f.expiry=value;};
+  window.portalQuestionnaireExpiry=setQuestionnaireExpiry;
+  window.portalRegFileExpiry=regFileExpiry;
+  window.portalPendingExpiry=(i,value)=>{const f=pendingDocs[i];if(!f)return;if(!expiryAccepted(value,"Expiry date cannot be in the past."))return renderDocModal();f.expiry=value;};
+  window.portalPendingRemove=i=>{pendingDocs.splice(i,1);renderDocModal();};
+  window.portalPendingCancel=()=>{pendingDocs=[];pendingMeta=null;if(previewDoc?.doc===null||!docVersions(db.documents[previewDoc?.doc]||{}).length)previewDoc=null;renderDocModal();};
+  window.portalPendingSave=savePendingDocuments;
   window.portalSubmitResponse=submitResponse;
   window.portalAddDocument=addDocument;
   window.portalProfileTab=showProfileTab;
   window.portalProfileEntry=profileEntry;
+  window.portalSiteOpen=openSiteModal;
+  window.portalSiteClose=closeSiteModal;
+  window.portalSiteSave=saveSite;
+  window.portalDocPreview=(i,v,f)=>{const doc=db.documents[i];if(!doc||!docVersions(doc).length)return;previewDoc={doc:i,v:v??docVersions(doc).length-1,f:f??0};renderDocModal();};
+  window.portalDocPreviewClose=closeDocModal;
+  window.portalDocUploadVersion=uploadDocumentVersion;
+  window.portalPendingMeta=(key,value)=>{if(pendingMeta&&["name","type"].includes(key))pendingMeta[key]=value;};
+  window.portalPendingSync=syncPendingMeta;
+  document.addEventListener("keydown",event=>{if(event.key==="Escape"&&previewDoc)closeDocModal();});
+  document.addEventListener("keydown",event=>{if(event.key==="Escape"&&siteDraft)closeSiteModal();});
   window.portalProfileEdit=profileEdit;
   window.portalProfileCancel=profileCancel;
   window.portalSaveProfile=saveProfile;
   window.portalDocumentFilter=tab=>{if(!["All","Under Review","Approved","Expiring Soon","Expired","Required"].includes(tab))return;documentFilter=tab;render();};
-  window.portalDocInfo=docInfo;
   window.portalDocumentFiles=addDocumentFiles;
   window.portalReset=resetDemo;
   window.portalRegCocCheck=checked=>{const button=document.getElementById("reg-coc-start");if(button)button.disabled=!checked;};
@@ -1191,5 +1396,6 @@
   window.portalRegAddCat=regAddCategory;
   window.portalRegRemoveCat=regRemoveCategory;
   window.portalRegSubmit=regSubmit;
+  window.portalRegScroll=id=>document.getElementById(id)?.scrollIntoView({behavior:"smooth",block:"start"});
   render();
 })();
