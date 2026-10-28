@@ -1,9 +1,9 @@
-"use client";
-
-import { useParams } from "next/navigation";
 import SampleDetails from "@/components/sample-requests/SampleDetails";
+import { initial } from "@/lib/data";
 
-export default function Page() {
-  const { id } = useParams<{ id: string }>();
+export const generateStaticParams = () => initial.requests.map((request) => ({ id: request.id }));
+
+export default async function Page({ params }: PageProps<"/sample-requests/[id]">) {
+  const { id } = await params;
   return <SampleDetails key={id} id={id} />;
 }

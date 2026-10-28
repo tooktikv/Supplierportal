@@ -52,40 +52,40 @@ export interface CfpEntry {
   files: FileMeta[];
 }
 
-export interface GhgState {
+/** Every SRM list item shares these fields; edits flip it back to Draft until it is submitted again. */
+export interface SrmRecordMeta {
+  id: string;
+  status: "Draft" | "Submitted";
+  updated: string;
+}
+
+export interface GhgRecord extends SrmRecordMeta {
   type: "" | "CFO" | "CFP";
   cfo: CfoEntry[];
   cfp: CfpEntry[];
-  submittedAt?: string;
 }
 
 export const HR_STANDARDS = ["มาตรฐานแรงงานไทย (มรท.8001)", "SA8000", "SMETA", "อื่น ๆ"] as const;
-export interface HrEntry {
-  id: string;
+export interface HrRecord extends SrmRecordMeta {
   standard: "" | (typeof HR_STANDARDS)[number];
   other: string;
   expiry: string;
   files: FileMeta[];
 }
-export interface HrState {
-  entries: HrEntry[];
-  submittedAt?: string;
-}
 
-export interface GovState {
+export interface GovRecord extends SrmRecordMeta {
   cac: "" | "Yes" | "No";
   cacExpiry: string;
   cacFiles: FileMeta[];
   coc: "" | "Yes" | "No";
   cocFiles: FileMeta[];
-  submittedAt?: string;
 }
 
 export interface SrmState {
   projects: SrmProject[];
-  ghg: GhgState;
-  humanRights: HrState;
-  governance: GovState;
+  ghg: GhgRecord[];
+  humanRights: HrRecord[];
+  governance: GovRecord[];
 }
 
 // Mock master data: replace with the real lists when they are available.
@@ -125,7 +125,10 @@ export const emptyProject = (): SrmProject => ({
 });
 export const emptyCfo = (id = newId("cfo")): CfoEntry => ({ id, certNo: "", standard: "", scopeDate: "", scope1: "", scope2: "", scope3: "", scope3Category: "", production: "", unit: "", files: [] });
 export const emptyCfp = (kind: CfpEntry["kind"] = "period", id = newId("cfp")): CfpEntry => ({ id, kind, certNo: "", standard: "", product: "", perUnit: "", unit: "", scope: "", period: "", files: [] });
-export const emptyHr = (id = newId("hr")): HrEntry => ({ id, standard: "", other: "", expiry: "", files: [] });
+const todayIsoDate = () => new Date().toISOString().slice(0, 10);
+export const emptyGhg = (): GhgRecord => ({ id: newId("ghg"), status: "Draft", updated: todayIsoDate(), type: "", cfo: [emptyCfo()], cfp: [emptyCfp("period")] });
+export const emptyHr = (): HrRecord => ({ id: newId("hr"), status: "Draft", updated: todayIsoDate(), standard: "", other: "", expiry: "", files: [] });
+export const emptyGov = (): GovRecord => ({ id: newId("gov"), status: "Draft", updated: todayIsoDate(), cac: "", cacExpiry: "", cacFiles: [], coc: "", cocFiles: [] });
 
 export const initialSrm = (): SrmState => ({
   projects: [
@@ -135,10 +138,40 @@ export const initialSrm = (): SrmState => ({
       files: [{ name: "solar-project-brief.pdf", size: 420000, type: "application/pdf" }], updateMonth: "2026-09", progress: "In progress", progressFiles: [], details: "", updated: "2026-09-30",
     },
   ],
-  ghg: { type: "", cfo: [emptyCfo("cfo-1")], cfp: [emptyCfp("period", "cfp-1")] },
-  humanRights: { entries: [emptyHr("hr-1")] },
-  governance: { cac: "", cacExpiry: "", cacFiles: [], coc: "", cocFiles: [] },
+  ghg: [
+    {
+      id: "ghg-demo01", status: "Submitted", updated: "2026-09-30", type: "CFO",
+      cfo: [{ id: "cfo-demo01", certNo: "TGO CFO FY25-01-014", standard: "ISO 14064", scopeDate: "2025-12-31", scope1: "110.40", scope2: "72.10", scope3: "310.00", scope3Category: SCOPE3_CATEGORIES[0], production: "14000", unit: "tonne", files: [{ name: "cfo-certificate.pdf", size: 310000, type: "application/pdf" }] }],
+      cfp: [emptyCfp("period", "cfp-demo01")],
+    },
+  ],
+  humanRights: [
+    { id: "hr-demo01", status: "Submitted", updated: "2026-09-30", standard: "SA8000", other: "", expiry: "2027-06-30", files: [{ name: "sa8000-certificate.pdf", size: 280000, type: "application/pdf" }] },
+  ],
+  governance: [
+    { id: "gov-demo01", status: "Submitted", updated: "2026-09-30", cac: "Yes", cacExpiry: "2027-03-31", cacFiles: [{ name: "cac-membership.pdf", size: 190000, type: "application/pdf" }], coc: "Yes", cocFiles: [{ name: "code-of-conduct.pdf", size: 240000, type: "application/pdf" }] },
+  ],
 });
+
+/**
+ * Older saved data kept GHG / human rights / governance as a single form object.
+ * Turns each of those into list records; untouched (empty) forms are replaced by the demo seed.
+ */
+export function migrateSrmRecords(srm: Record<string, any>, seed: SrmState) { // eslint-disable-line @typescript-eslint/no-explicit-any
+  const meta = (old: { submittedAt?: string }) => ({ status: old.submittedAt ? "Submitted" : "Draft", updated: (old.submittedAt || new Date().toISOString()).slice(0, 10) });
+  if (!Array.isArray(srm.ghg)) {
+    const old = srm.ghg;
+    srm.ghg = old?.type ? [{ ...old, id: newId("ghg"), ...meta(old), submittedAt: undefined }] : structuredClone(seed.ghg);
+  }
+  if (!Array.isArray(srm.humanRights)) {
+    const entries = (srm.humanRights?.entries || []).filter((entry: { standard?: string }) => entry.standard);
+    srm.humanRights = entries.length ? entries.map((entry: object) => ({ ...entry, ...meta(srm.humanRights) })) : structuredClone(seed.humanRights);
+  }
+  if (!Array.isArray(srm.governance)) {
+    const old = srm.governance;
+    srm.governance = old?.cac || old?.coc ? [{ ...old, id: newId("gov"), ...meta(old), submittedAt: undefined }] : structuredClone(seed.governance);
+  }
+}
 
 const DECIMAL = /^-?\d+(\.\d{1,2})?$/;
 const POSITIVE = (value: string) => /^\d+(\.\d{1,2})?$/.test(value.trim()) && Number(value) > 0;
@@ -205,7 +238,7 @@ export function cfpErrors(entry: CfpEntry): Errors {
   return e;
 }
 
-export function hrErrors(entry: HrEntry): Errors {
+export function hrErrors(entry: Pick<HrRecord, "standard" | "other" | "expiry" | "files">): Errors {
   const e: Errors = {};
   if (!entry.standard) e.standard = "Select a standard.";
   if (entry.standard === "อื่น ๆ") text(e, "other", entry.other, 255);
@@ -214,7 +247,7 @@ export function hrErrors(entry: HrEntry): Errors {
   return e;
 }
 
-export function govErrors(g: GovState): Errors {
+export function govErrors(g: GovRecord): Errors {
   const e: Errors = {};
   if (!g.cac) e.cac = "Select Yes or No.";
   if (g.cac === "Yes") {
@@ -227,7 +260,7 @@ export function govErrors(g: GovState): Errors {
 }
 
 /** Errors keyed `${entryId}.${field}`; the selected certification type decides which sets are checked. */
-export function ghgErrors(g: GhgState): Errors {
+export function ghgErrors(g: GhgRecord): Errors {
   const e: Errors = {};
   if (!g.type) {
     e.type = "Select the Carbon Footprint certification type.";
@@ -238,8 +271,9 @@ export function ghgErrors(g: GhgState): Errors {
   return e;
 }
 
-export function hrAllErrors(h: HrState): Errors {
+/** Errors keyed `${record.id}.${field}`, matching the field names used by the form. */
+export function hrAllErrors(record: HrRecord): Errors {
   const e: Errors = {};
-  for (const entry of h.entries) for (const [field, message] of Object.entries(hrErrors(entry))) e[`${entry.id}.${field}`] = message;
+  for (const [field, message] of Object.entries(hrErrors(record))) e[`${record.id}.${field}`] = message;
   return e;
 }

@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Badge, InfoItem } from "@/components/ui";
 import { fmtDate } from "@/lib/docs";
+import { useI18n } from "@/lib/i18n";
 import { gateOf, needsSample } from "@/lib/policy";
 import { routes } from "@/lib/routes";
 import { usePortal } from "@/lib/store";
@@ -16,6 +17,7 @@ const timeFmt = new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "2-d
 
 export default function SampleDetails({ id }: { id: string }) {
   const { db } = usePortal();
+  const { t } = useI18n();
   const router = useRouter();
   const { editDraft } = useSampleActions();
   const r = db.requests.find((x) => x.id === id);
@@ -36,7 +38,7 @@ export default function SampleDetails({ id }: { id: string }) {
         <div>
           <div className="breadcrumbs" style={{ marginBottom: 11 }}>
             <button className="text-link" onClick={backToList}>
-              Sample Request
+              {t("Sample Request")}
             </button>{" "}
             / {r.id}
           </div>
@@ -45,31 +47,31 @@ export default function SampleDetails({ id }: { id: string }) {
             <Badge status={r.status} />
           </div>
           <p style={{ color: "var(--muted)", fontSize: 11, margin: "6px 0 0" }}>
-            {r.id} · {r.category} · {onsite ? "Onsite review" : "Digital document review"}
+            {r.id} · {t(r.category)} · {onsite ? t("Onsite review") : t("Digital document review")}
           </p>
         </div>
         <div className="footer-right">
           {canSubmitSample(r) ? (
             <>
               <button className="button" onClick={() => editDraft(r.id)}>
-                {r.status === "Draft" ? "Edit draft" : "Provide sample information"}
+                {r.status === "Draft" ? t("Edit draft") : t("Provide sample information")}
               </button>
             </>
           ) : (
             <button className="button" onClick={backToList}>
-              Back to list
+              {t("Back to list")}
             </button>
           )}
         </div>
       </div>
-      {r.status === "Under Review" && <div className="notice">Awaiting Buyer review.{onsite ? " Your proposed onsite visit is not confirmed until Buyer accepts the appointment." : " Your sample details and documents have been sent for review."}</div>}
+      {r.status === "Under Review" && <div className="notice">{t("Awaiting Buyer review.")}{onsite ? ` ${t("Your proposed onsite visit is not confirmed until Buyer accepts the appointment.")}` : ` ${t("Your sample details and documents have been sent for review.")}`}</div>}
       <div className="detail-layout">
         <div className="detail-main">
           <div className="card detail-section">
             <BuyerRequestBrief request={r} />
           </div>
           {r.supplierSubmission && <div className="card detail-section">
-            <h2>Supplier sample information</h2>
+            <h2>{t("Supplier sample information")}</h2>
             <div className="info-grid">
               <InfoItem label="Sample product name" value={r.supplierSubmission.productName} />
               <InfoItem label="Supplier product code / model" value={r.supplierSubmission.productCode} />
@@ -78,15 +80,15 @@ export default function SampleDetails({ id }: { id: string }) {
               <InfoItem label="Differences from Buyer requirements" value={r.supplierSubmission.deviations} />
               <InfoItem label="Supplier contact" value={`${r.supplierSubmission.contactName} · ${r.supplierSubmission.contactEmail}`} />
               <InfoItem label="Message to Buyer" value={r.supplierSubmission.notes} />
-              <InfoItem label="Submitted on" value={r.supplierSubmission.submittedAt ? fmtDate(r.supplierSubmission.submittedAt) : "Draft — not sent to Buyer"} />
+              <InfoItem label="Submitted on" value={r.supplierSubmission.submittedAt ? fmtDate(r.supplierSubmission.submittedAt) : t("Draft — not sent to Buyer")} />
               <InfoItem label="Last updated" value={fmtDate(r.updated)} />
             </div>
           </div>}
           {onsite && r.supplierSubmission ? (
             <div className="card detail-section">
-              <h2>Proposed onsite review</h2>
+              <h2>{t("Proposed onsite review")}</h2>
               <div className="info-grid">
-                <InfoItem label="Sample quantity" value={`${r.supplierSubmission.quantity} ${r.supplierSubmission.unit}`} />
+                <InfoItem label="Sample quantity" value={`${r.supplierSubmission.quantity} ${t(r.supplierSubmission.unit)}`} />
                 <InfoItem label="Site / factory" value={r.supplierSubmission.siteName} />
                 <InfoItem label="Onsite review address" value={r.supplierSubmission.siteAddress} />
                 <InfoItem label="Proposed visit date" value={fmtDate(r.supplierSubmission.visitDate)} />
@@ -96,13 +98,13 @@ export default function SampleDetails({ id }: { id: string }) {
                 <InfoItem label="Access / safety requirements" value={r.supplierSubmission.visitNotes} />
               </div>
               <p className="mock-note" style={{ margin: "14px 0 0" }}>
-                Proposed appointment only; Buyer confirmation is required.
+                {t("Proposed appointment only; Buyer confirmation is required.")}
               </p>
             </div>
           ) : null}
           {!onsite || r.supplierSubmission || (r.files || []).length ? (
             <div className="card detail-section">
-              <h2>Sample documents & specifications</h2>
+              <h2>{t("Sample documents & specifications")}</h2>
               <div className="info-grid">
                 <InfoItem label="Product specification" value={r.specification} />
                 <InfoItem label="Technical description" value={r.digitalDescription} />
@@ -118,39 +120,39 @@ export default function SampleDetails({ id }: { id: string }) {
                           {f.type || "file"} · {kb(f.size)} KB
                         </small>
                       </span>
-                      <span className="mock-note">Browser-only mock file</span>
+                      <span className="mock-note">{t("Browser-only mock file")}</span>
                     </div>
                   ))
                 ) : (
-                  <small>No digital attachments</small>
+                  <small>{t("No digital attachments")}</small>
                 )}
               </div>
             </div>
           ) : null}
           {outcome ? (
             <div className="card detail-section">
-              <h2>Evaluation result</h2>
+              <h2>{t("Evaluation result")}</h2>
               <div className={`result-banner ${outcome === "Rejected" ? "rejected" : ""}`}>
-                <strong>{outcome === "Approved" ? "Evaluation approved" : outcome === "Rejected" ? "Evaluation rejected" : "Evaluation update"}</strong>
+                <strong>{outcome === "Approved" ? t("Evaluation approved") : outcome === "Rejected" ? t("Evaluation rejected") : t("Evaluation update")}</strong>
                 <br />
-                {r.feedback || "An internal evaluator recorded this result."}
+                {t(r.feedback || "An internal evaluator recorded this result.")}
                 <br />
-                <small>Decision date: {fmtDate(r.decisionDate)}</small>
+                <small>{t("Decision date: {date}", { date: fmtDate(r.decisionDate) })}</small>
               </div>
             </div>
           ) : null}
           {r.feedback && !r.outcome ? (
             <div className="card detail-section">
-              <h2>Evaluator feedback</h2>
+              <h2>{t("Evaluator feedback")}</h2>
               <div className="feedback">
-                <strong>{canSubmitSample(r) ? "Action requested" : "Previous Buyer feedback"}</strong>
-                {r.feedback}
+                <strong>{canSubmitSample(r) ? t("Action requested") : t("Previous Buyer feedback")}</strong>
+                {t(r.feedback)}
                 {r.requiredCorrections ? (
                   <>
                     <br />
                     <br />
-                    <strong>Requested corrections</strong>
-                    {r.requiredCorrections}
+                    <strong>{t("Requested corrections")}</strong>
+                    {t(r.requiredCorrections)}
                   </>
                 ) : null}
               </div>
@@ -158,7 +160,7 @@ export default function SampleDetails({ id }: { id: string }) {
           ) : null}
           {revisions.length ? (
             <div className="card detail-section">
-              <h2>Responses & revisions</h2>
+              <h2>{t("Responses & revisions")}</h2>
               {revisions
                 .slice()
                 .reverse()
@@ -167,10 +169,10 @@ export default function SampleDetails({ id }: { id: string }) {
                     <span className="activity-dot" />
                     <div>
                       <strong>
-                        Revision {revisions.length - i} · {fmtDate(v.date)}
+                        {t("Revision {n}", { n: revisions.length - i })} · {fmtDate(v.date)}
                       </strong>
                       <small>
-                        {v.comments || "Information updated"} · {v.files?.length || 0} attachment(s)
+                        {t(v.comments || "Information updated")} · {t("{n} attachment(s)", { n: v.files?.length || 0 })}
                       </small>
                     </div>
                   </div>
@@ -180,14 +182,14 @@ export default function SampleDetails({ id }: { id: string }) {
         </div>
         <aside className="detail-side">
           <div className="card detail-section">
-            <h2>Request timeline</h2>
+            <h2>{t("Request timeline")}</h2>
             <div className="timeline">
               {(r.history || [])
                 .slice()
                 .reverse()
                 .map((h, i) => (
                   <div className="timeline-event" key={`${h[1]}-${i}`}>
-                    <strong>{h[0]}</strong>
+                    <strong>{t(h[0])}</strong>
                     <small>
                       {fmtDate(h[1])} · {timeFmt.format(new Date(h[1]))}
                     </small>
@@ -196,23 +198,23 @@ export default function SampleDetails({ id }: { id: string }) {
             </div>
           </div>
           <div className="card detail-section">
-            <h2>Submission overview</h2>
+            <h2>{t("Submission overview")}</h2>
             <div style={{ display: "grid", gap: 10 }}>
               <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10 }}>
-                <span>Current status</span>
+                <span>{t("Current status")}</span>
                 <Badge status={r.status} />
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10 }}>
-                <span>Sample required</span>
-                <strong>{needsSample(r.category) ? "Yes" : "No — exempt"}</strong>
+                <span>{t("Sample required")}</span>
+                <strong>{needsSample(r.category) ? t("Yes") : t("No — exempt")}</strong>
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10 }}>
-                <span>Sample gate</span>
-                <strong>{gateOf(r)}</strong>
+                <span>{t("Sample gate")}</span>
+                <strong>{t(gateOf(r))}</strong>
               </div>
             </div>
           </div>
-          <p className="mock-note">Mock workflow only. Procurement evaluation and physical receipt are not connected to a live system.</p>
+          <p className="mock-note">{t("Mock workflow only. Procurement evaluation and physical receipt are not connected to a live system.")}</p>
         </aside>
       </div>
     </>

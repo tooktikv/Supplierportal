@@ -6,11 +6,11 @@ import { I18nProvider } from "@/lib/i18n";
 import { ConfirmProvider } from "@/components/ConfirmDialog";
 
 export const metadata: Metadata = {
-  title: "Supplier Portal | Northstar",
+  title: "Supplier Portal",
   description: "Supplier onboarding, sample requests, company profile and documents.",
 };
 
-export const viewport: Viewport = { themeColor: "#f6f8fb" };
+export const viewport: Viewport = { themeColor: "#09427c" };
 
 const dmSans = DM_Sans({ subsets: ["latin"], variable: "--font-dm", display: "swap" });
 const manrope = Manrope({ subsets: ["latin"], variable: "--font-manrope", display: "swap" });

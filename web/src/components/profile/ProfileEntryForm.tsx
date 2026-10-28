@@ -3,6 +3,7 @@
 import type { FormEvent } from "react";
 import { useEffect, useRef } from "react";
 import DemoFill from "@/components/DemoFill";
+import { useI18n } from "@/lib/i18n";
 
 export interface EntryField {
   name: string;
@@ -22,6 +23,7 @@ interface Props {
 }
 
 export default function ProfileEntryForm({ fields, submitLabel, onSubmit, onCancel, title }: Props) {
+  const { t } = useI18n();
   const formRef = useRef<HTMLFormElement>(null);
   const formId = `profile-form-${fields[0]?.name ?? "entry"}`;
 
@@ -60,12 +62,12 @@ export default function ProfileEntryForm({ fields, submitLabel, onSubmit, onCanc
       <div style={{ gridColumn: "1/-1" }}><DemoFill onFill={fillDemo} /></div>
       {fields.map(({ name, label, value = "", type = "text" }) => (
         <div className="form-field" key={name}>
-          <label htmlFor={`profile-${name}`}>{label}</label>
+          <label htmlFor={`profile-${name}`}>{t(label)}</label>
           {Array.isArray(type) ? (
             <select className="field-control" id={`profile-${name}`} name={name} defaultValue={value} required>
               {type.map((option) => (
                 <option key={option} value={option}>
-                  {option}
+                  {t(option)}
                 </option>
               ))}
             </select>
@@ -77,10 +79,10 @@ export default function ProfileEntryForm({ fields, submitLabel, onSubmit, onCanc
       {!title && (
         <div className="wizard-footer" style={{ gridColumn: "1/-1" }}>
           <button type="button" className="button" onClick={onCancel}>
-            Cancel
+            {t("Cancel")}
           </button>
           <button className="button primary" type="submit">
-            {submitLabel}
+            {t(submitLabel)}
           </button>
         </div>
       )}
@@ -92,19 +94,19 @@ export default function ProfileEntryForm({ fields, submitLabel, onSubmit, onCanc
   return (
     <div className="modal-overlay" onMouseDown={(e) => e.target === e.currentTarget && onCancel()}>
       <div className="modal-dialog entry-dialog" role="dialog" aria-modal="true" aria-labelledby={`${formId}-title`}>
-        <button type="button" className="modal-close" aria-label="Close" onClick={onCancel}>
+        <button type="button" className="modal-close" aria-label={t("Close")} onClick={onCancel}>
           ×
         </button>
         <div className="modal-body">
-          <h2 id={`${formId}-title`}>{title}</h2>
+          <h2 id={`${formId}-title`}>{t(title)}</h2>
           {form}
         </div>
         <div className="modal-footer">
           <button type="button" className="button" onClick={onCancel}>
-            Cancel
+            {t("Cancel")}
           </button>
           <button className="button primary" type="submit" form={formId}>
-            {submitLabel}
+            {t(submitLabel)}
           </button>
         </div>
       </div>

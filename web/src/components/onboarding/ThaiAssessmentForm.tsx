@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import FormField from "@/components/sample-requests/FormField";
 import { kb } from "@/components/sample-requests/sample-utils";
 import { fmtDate, pushDocument, trackFile } from "@/lib/docs";
+import { useI18n } from "@/lib/i18n";
 import { routes } from "@/lib/routes";
 import { usePortal } from "@/lib/store";
 import { useConfirm } from "@/components/ConfirmDialog";
@@ -19,6 +20,7 @@ const stepOf = (key: string) => (/^q\d+$/.test(key) || key === "notes" ? 1 : 0);
 
 export default function ThaiAssessmentForm() {
   const { db, mutate, toast } = usePortal();
+  const { t } = useI18n();
   const router = useRouter();
   const confirm = useConfirm();
   const [step, setStep] = useState(0);
@@ -64,7 +66,7 @@ export default function ThaiAssessmentForm() {
     setErrors(next);
     const first = Object.keys(next)[0];
     if (first) {
-      toast(`Complete the highlighted items in "${STEPS[stepOf(first)]}" before submitting.`);
+      toast(t("Complete the highlighted items in “{section}” before submitting.", { section: STEPS[stepOf(first)] }));
       setStep(stepOf(first));
       return;
     }
@@ -82,12 +84,12 @@ export default function ThaiAssessmentForm() {
   return (
     <>
       {!submitted && <DemoFill onFill={() => { setErrors({}); mutate(fillDemoAssessment); }} />}
-      <div className="notice">F-TLS-01 · Part 3 of มาตรฐานแรงงานไทย (มรท.). Fill in your details, answer the self-assessment, then review the result. Progress is saved only in this browser.</div>
-      <nav className="learning-stepper" aria-label="F-TLS-01 sections">
+      <div className="notice">{t("F-TLS-01 · Part 3 of มาตรฐานแรงงานไทย (มรท.). Fill in your details, answer the self-assessment, then review the result. Progress is saved only in this browser.")}</div>
+      <nav className="learning-stepper" aria-label={t("F-TLS-01 sections")}>
         {STEPS.map((title, index) => (
           <button className={`learning-step ${index === step ? "selected" : ""}`} key={title} aria-current={index === step ? "step" : undefined} onClick={() => goTo(index)}>
             <span className="learning-step-number">{stepDone[index] ? "✓" : index + 1}</span>
-            <span>{title}</span>
+            <span>{t(title)}</span>
           </button>
         ))}
       </nav>
@@ -95,7 +97,7 @@ export default function ThaiAssessmentForm() {
       <article className="card learning-module commitment-form">
         {step === 0 && (
           <>
-            <div className="learning-module-heading"><div><span className="eyebrow">SECTION 1/3 · FILL IN</span><h3>ข้อมูลทั่วไป</h3></div></div>
+            <div className="learning-module-heading"><div><span className="eyebrow">{t("SECTION 1/3 · FILL IN")}</span><h3>{t("ข้อมูลทั่วไป")}</h3></div></div>
             <div className="form-grid">
               <FormField label="จำนวนพนักงานรวม" {...text("total")} type="number" min="1" required hint="Whole number greater than 0" />
               <FormField label="จำนวนพนักงานชาย" {...text("male")} type="number" min="1" required />
@@ -112,23 +114,23 @@ export default function ThaiAssessmentForm() {
                 ))}
               </div>
             </fieldset>
-            {errors.certified && <p className="sample-field-error" role="alert">{errors.certified}</p>}
+            {errors.certified && <p className="sample-field-error" role="alert">{t(errors.certified)}</p>}
             {state.certified === "มี" && (
               <div className="sample-form-section" data-field="certFiles">
-                <h4>Upload TLS 8001 certificate <span className="required">*</span></h4>
+                <h4>{t("Upload TLS 8001 certificate")} <span className="required">*</span></h4>
                 <div className="upload-box">
-                  <div className="helper">PDF only · 1 file · max 5 MB</div>
-                  <input type="file" accept=".pdf,application/pdf" disabled={submitted || state.certFiles.length >= 1} onChange={(e) => { pickCertificate(e.target.files); e.target.value = ""; }} />
+                  <div className="helper">{t("PDF only · 1 file · max 5 MB")}</div>
+                  <input type="file" accept=".pdf,application/pdf" aria-label={t("Upload TLS 8001 certificate")} disabled={submitted || state.certFiles.length >= 1} onChange={(e) => { pickCertificate(e.target.files); e.target.value = ""; }} />
                   <div className="file-list">
                     {state.certFiles.map((file) => (
                       <div className="file-row" key={file.uid || file.name}>
                         <span>▤ &nbsp;{file.name} <small>({kb(file.size)} KB)</small></span>
-                        {!submitted && <button type="button" aria-label={`Remove ${file.name}`} onClick={() => update((draft) => void (draft.certFiles = []))}>Remove</button>}
+                        {!submitted && <button type="button" aria-label={t("Remove {name}", { name: file.name })} onClick={() => update((draft) => void (draft.certFiles = []))}>{t("Remove")}</button>}
                       </div>
                     ))}
                   </div>
                 </div>
-                {errors.certFiles && <p className="sample-field-error" role="alert">{errors.certFiles}</p>}
+                {errors.certFiles && <p className="sample-field-error" role="alert">{t(errors.certFiles)}</p>}
               </div>
             )}
             <FormField label="ได้รับการรับรองมาตรฐานสากล อื่นๆ (ระบุเพิ่มเติม)" {...text("otherStandards")} textarea full hint="Optional · max 5000 characters" />
@@ -137,13 +139,13 @@ export default function ThaiAssessmentForm() {
 
         {step === 1 && (
           <>
-            <div className="learning-module-heading"><div><span className="eyebrow">SECTION 2/3 · CHOOSE &amp; NOTE</span><h3>แบบประเมินตนเอง 21 ข้อ</h3></div></div>
+            <div className="learning-module-heading"><div><span className="eyebrow">{t("SECTION 2/3 · CHOOSE & NOTE")}</span><h3>{t("แบบประเมินตนเอง 21 ข้อ")}</h3></div></div>
             <div className="tls-progress">
               <span>ตอบแล้ว {answered}/{TLS_QUESTIONS.length} ข้อ</span>
               <div className="progress-track"><div className="progress-fill" style={{ width: `${(answered / TLS_QUESTIONS.length) * 100}%` }} /></div>
             </div>
             <p className="helper">ใช่ = 5 คะแนน · ไม่ใช่ = 0 คะแนน · ไม่เกี่ยวข้อง = 5 คะแนน (เลือกได้เฉพาะข้อ 13, 16 และ 20) · ข้อ 21 ไม่นับคะแนน</p>
-            <div className="tls-matrix" role="group" aria-label="Self-assessment questions">
+            <div className="tls-matrix" role="group" aria-label={t("Self-assessment questions")}>
               <div className="tls-head" aria-hidden="true"><span>#</span><span>ข้อประเมิน</span><span>ใช่</span><span>ไม่ใช่</span><span>ไม่เกี่ยวข้อง</span></div>
               {TLS_QUESTIONS.map((question, index) => {
                 const key = `q${question.n}`;
@@ -153,7 +155,7 @@ export default function ThaiAssessmentForm() {
                     <fieldset className={`tls-row ${errors[key] ? "has-error" : ""} ${state.answers[question.n] ? "answered" : ""}`} id={`tls-${key}`} disabled={submitted}>
                       <legend className="sr-only">ข้อ {question.n}</legend>
                       <span className="tls-num">{question.n}</span>
-                      <span className="tls-text">{question.text}{errors[key] && <em className="sample-field-error" role="alert">{errors[key]}</em>}</span>
+                      <span className="tls-text">{question.text}{errors[key] && <em className="sample-field-error" role="alert">{t(errors[key])}</em>}</span>
                       {(["ใช่", "ไม่ใช่", "ไม่เกี่ยวข้อง"] as TlsAnswer[]).map((answer) =>
                         answer === "ไม่เกี่ยวข้อง" && !question.na ? (
                           <span className="tls-cell tls-cell-off" key={answer} aria-hidden="true" />
@@ -175,7 +177,7 @@ export default function ThaiAssessmentForm() {
 
         {step === 2 && (
           <>
-            <div className="learning-module-heading"><div><span className="eyebrow">SECTION 3/3 · REVIEW</span><h3>สรุปผล</h3></div></div>
+            <div className="learning-module-heading"><div><span className="eyebrow">{t("SECTION 3/3 · REVIEW")}</span><h3>{t("สรุปผล")}</h3></div></div>
             <div className="tls-summary">
               <h4>ผลการประเมิน (คำนวณโดยระบบ)</h4>
               {result.complete ? (
@@ -210,9 +212,9 @@ export default function ThaiAssessmentForm() {
         )}
 
         <div className="wizard-footer">
-          {step === 0 ? <button className="button" onClick={() => router.push(routes.onboarding)}>Back to tasks</button> : <button className="button" onClick={() => goTo(step - 1)}>Back</button>}
-          <span className="mock-note">{submitted ? `Submitted on ${fmtDate(state.submittedAt)}` : `Section ${step + 1} of ${STEPS.length}`}</span>
-          {step < STEPS.length - 1 ? <button className="button primary" onClick={() => goTo(step + 1)}>Next →</button> : submitted ? <button className="button primary" onClick={() => router.push(routes.onboarding)}>Back to tasks</button> : <button className="button primary" onClick={submit}>Submit</button>}
+          {step === 0 ? <button className="button" onClick={() => router.push(routes.onboarding)}>{t("Back")}</button> : <button className="button" onClick={() => goTo(step - 1)}>{t("Back")}</button>}
+          <span className="mock-note">{submitted ? t("Submitted on {date}", { date: fmtDate(state.submittedAt) }) : t("Section {n} of {total}", { n: step + 1, total: STEPS.length })}</span>
+          {step < STEPS.length - 1 ? <button className="button primary" onClick={() => goTo(step + 1)}>{t("Next →")}</button> : submitted ? <button className="button primary" onClick={() => router.push(routes.onboarding)}>{t("Finish")}</button> : <button className="button primary" onClick={submit}>{t("Submit")}</button>}
         </div>
       </article>
     </>

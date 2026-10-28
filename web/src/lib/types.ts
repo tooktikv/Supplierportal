@@ -92,7 +92,7 @@ export interface Db {
   };
   onboarding: Record<string, any> & {
     tasks: Record<string, number>;
-    riskAnswers: Record<string, string>;
+    riskAssessment: { answers: Record<string, Record<number, number>>; submittedAt?: string };
     questionnaireAnswers: Record<string, any>;
     learningFlow: Record<string, any>;
   };

@@ -3,6 +3,7 @@
 import { Badge, PageHeading } from "@/components/ui";
 import { useSampleActions } from "@/components/sample-requests/useSampleActions";
 import { fmtDate } from "@/lib/docs";
+import { useI18n } from "@/lib/i18n";
 import { usePortal } from "@/lib/store";
 
 const NOTIFY_STATUSES = ["Action Required", "Resubmission Required", "Approved", "Rejected", "Under Review"];
@@ -18,6 +19,7 @@ const titleFor = (status: string) =>
 
 export default function NotificationsPage() {
   const { db } = usePortal();
+  const { t } = useI18n();
   const { requestAction } = useSampleActions();
   const notes = db.requests.filter((r) => NOTIFY_STATUSES.includes(r.status)).sort((a, b) => b.updated.localeCompare(a.updated));
 
@@ -32,23 +34,23 @@ export default function NotificationsPage() {
                 <span className="activity-dot"></span>
                 <div style={{ flex: 1 }}>
                   <strong>
-                    {titleFor(r.status)} · {r.name}
+                    {t(titleFor(r.status))} · {r.name}
                   </strong>
                   <small>
-                    {r.id} · {fmtDate(r.updated)} · {r.feedback || `Status: ${r.status}`}
+                    {r.id} · {fmtDate(r.updated)} · {r.feedback ? t(r.feedback) : t("Status: {status}", { status: t(r.status) })}
                   </small>
                 </div>
                 <Badge status={r.status} />
                 <button className="button small" onClick={() => requestAction(r.id)}>
-                  View
+                  {t("View")}
                 </button>
               </div>
             ))
           ) : (
             <div className="table-empty">
               <div className="empty-icon">♧</div>
-              <h3>You’re all caught up</h3>
-              <p>There are no new supplier portal updates.</p>
+              <h3>{t("You’re all caught up")}</h3>
+              <p>{t("There are no new supplier portal updates.")}</p>
             </div>
           )}
         </div>

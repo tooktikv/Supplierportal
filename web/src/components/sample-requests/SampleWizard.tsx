@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { InfoItem, PageHeading } from "@/components/ui";
 import { addRequestDocuments, fmtDate, todayIso } from "@/lib/docs";
+import { useI18n } from "@/lib/i18n";
 import { CATEGORIES, isDigital, isPhysical, needsSample, policyFields, requiresApproval, transition } from "@/lib/policy";
 import { routes } from "@/lib/routes";
 import { usePortal } from "@/lib/store";
@@ -21,6 +22,7 @@ const TYPE_OPTIONS = [
 
 export default function SampleWizard() {
   const { db, mutate, toast, wizard, setWizard } = usePortal();
+  const { t } = useI18n();
   const router = useRouter();
   const confirm = useConfirm();
   const [errors, setErrors] = useState<Set<string>>(new Set());
@@ -125,7 +127,7 @@ export default function SampleWizard() {
 
   const upload = (
     <div className="form-field full">
-      <label>Attach supporting documents</label>
+      <label>{t("Attach supporting documents")}</label>
       <UploadBox
         files={files}
         helper="PDF, DOCX, JPG or PNG · max 10 MB per file. Attachments are simulated and remain in this browser only."
@@ -147,30 +149,30 @@ export default function SampleWizard() {
         <FormField label="Product code / specification reference" {...field("code")} required error="Enter a product code or specification reference." />
         <div className={`form-field full ${errors.has("type") ? "has-error" : ""}`} data-field="type">
           <label>
-            Sample submission type <span className="required">*</span>
+            {t("Sample submission type")} <span className="required">*</span>
           </label>
           <div className="radio-options">
-            {TYPE_OPTIONS.map(([v, t, d]) => (
+            {TYPE_OPTIONS.map(([v, title, d]) => (
               <label className="radio-card" key={v}>
                 <input type="radio" name="sampleType" value={v} checked={form.type === v} onChange={() => setField("type", v)} />
                 <span>
-                  <strong>{t}</strong>
-                  <small>{d}</small>
+                  <strong>{t(title)}</strong>
+                  <small>{t(d)}</small>
                 </span>
               </label>
             ))}
           </div>
-          <small>Sample approval requirements depend on the selected product category.</small>
-          <span className="form-error">Choose a submission type.</span>
+          <small>{t("Sample approval requirements depend on the selected product category.")}</small>
+          <span className="form-error">{t("Choose a submission type.")}</span>
         </div>
         <div className="notice full" style={{ gridColumn: "1/-1" }}>
-          {form.category
+          {t(form.category
             ? requiresApproval(form.category)
               ? "This category requires sample approval before the sample gate is satisfied. Supplier onboarding qualification remains a separate decision."
               : needsSample(form.category)
                 ? "A sample is required for this category, but sample approval is not a mandatory onboarding gate."
                 : "This category is configured as sample-exempt; its sample gate will be recorded as Exempt."
-            : "Select a category to see its sample requirement."}
+            : "Select a category to see its sample requirement.")}
         </div>
       </div>
     );
@@ -179,7 +181,7 @@ export default function SampleWizard() {
       <div className="form-grid">
         {isPhysical(form.type) ? (
           <>
-            <div className="form-divider">Physical sample details</div>
+            <div className="form-divider">{t("Physical sample details")}</div>
             <FormField label="Sample quantity" {...field("quantity")} required type="number" min="1" error="Enter a quantity greater than zero." />
             <FormField label="Unit of measure" {...field("unit")} required />
             <FormField label="Product description / technical requirements" {...field("description")} required textarea full error="Describe the product or its technical requirements." />
@@ -188,7 +190,7 @@ export default function SampleWizard() {
         ) : null}
         {isDigital(form.type) ? (
           <>
-            <div className="form-divider">Digital sample / specification</div>
+            <div className="form-divider">{t("Digital sample / specification")}</div>
             <FormField label="Product specification" {...field("specification")} required textarea full error="Enter the relevant specification or standard." />
             <FormField label="Technical description" {...field("digitalDescription")} textarea full placeholder="Optional technical detail" />
             <FormField label="Reference URL" {...field("url")} type="url" full placeholder="https://" />
@@ -202,7 +204,7 @@ export default function SampleWizard() {
       <div className="form-grid">
         {isPhysical(form.type) ? (
           <>
-            <div className="form-divider">Physical sample delivery</div>
+            <div className="form-divider">{t("Physical sample delivery")}</div>
             <FormField label="Delivery address" {...field("address")} required textarea full error="Enter the delivery address." />
             <FormField label="Recipient name" {...field("recipient")} required error="Enter the receiving contact." />
             <FormField label="Recipient contact" {...field("contact")} required error="Enter a phone number or email address." />
@@ -212,9 +214,9 @@ export default function SampleWizard() {
         ) : null}
         {isDigital(form.type) ? (
           <>
-            <div className="form-divider">Digital documents</div>
+            <div className="form-divider">{t("Digital documents")}</div>
             <p className="helper full" style={{ gridColumn: "1/-1" }}>
-              Attach datasheets, specifications, product images, certificates, or other supporting evidence. Files are not uploaded to a server.
+              {t("Attach datasheets, specifications, product images, certificates, or other supporting evidence. Files are not uploaded to a server.")}
             </p>
             {upload}
           </>
@@ -225,11 +227,11 @@ export default function SampleWizard() {
     body = (
       <>
         <div className="notice">
-          Review the information before submitting. Your request will be saved to this browser’s mock data. Submission does not record an approval decision.
+          {t("Review the information before submitting. Your request will be saved to this browser’s mock data. Submission does not record an approval decision.")}
         </div>
         <div className="content-stack">
           <div className="card detail-section">
-            <h2>Supplier & product information</h2>
+            <h2>{t("Supplier & product information")}</h2>
             <div className="info-grid">
               <InfoItem label="Supplier" value={db.profile.company} />
               <InfoItem label="Product" value={form.name} />
@@ -241,9 +243,9 @@ export default function SampleWizard() {
           </div>
           {isPhysical(form.type) ? (
             <div className="card detail-section">
-              <h2>Physical sample & delivery</h2>
+              <h2>{t("Physical sample & delivery")}</h2>
               <div className="info-grid">
-                <InfoItem label="Quantity" value={`${form.quantity} ${form.unit}`} />
+                <InfoItem label="Quantity" value={`${form.quantity} ${t(String(form.unit))}`} />
                 <InfoItem label="Requested delivery" value={fmtDate(form.deliveryDate)} />
                 <InfoItem label="Description" value={form.description} />
                 <InfoItem label="Recipient" value={form.recipient} />
@@ -254,7 +256,7 @@ export default function SampleWizard() {
           ) : null}
           {isDigital(form.type) ? (
             <div className="card detail-section">
-              <h2>Digital sample & documents</h2>
+              <h2>{t("Digital sample & documents")}</h2>
               <div className="info-grid">
                 <InfoItem label="Product specification" value={form.specification} />
                 <InfoItem label="Reference URL" value={form.url || "—"} />
@@ -267,7 +269,7 @@ export default function SampleWizard() {
                     </div>
                   ))
                 ) : (
-                  <small>No attachments selected</small>
+                  <small>{t("No attachments selected")}</small>
                 )}
               </div>
             </div>
@@ -275,9 +277,9 @@ export default function SampleWizard() {
           <label className={`declaration ${errors.has("declaration") ? "has-error" : ""}`} data-field="declaration">
             <input type="checkbox" checked={Boolean(form.declaration)} onChange={(e) => setField("declaration", e.target.checked)} />
             <span>
-              I confirm that the information provided is accurate and the documents are relevant to this product. <span className="required">*</span>
+              {t("I confirm that the information provided is accurate and the documents are relevant to this product.")} <span className="required">*</span>
             </span>
-            <span className="form-error">Confirm the declaration before submitting.</span>
+            <span className="form-error">{t("Confirm the declaration before submitting.")}</span>
           </label>
         </div>
       </>
@@ -287,11 +289,11 @@ export default function SampleWizard() {
   return (
     <>
       <PageHeading
-        title={isEdit ? "Continue Sample Request" : "New Sample Request"}
-        desc={`Step ${step + 1} of 4 · ${WIZARD_NAMES[step]}`}
+        title={isEdit ? t("Continue Sample Request") : t("New Sample Request")}
+        desc={t("Step {n} of 4 · {name}", { n: step + 1, name: t(WIZARD_NAMES[step]) })}
         action={
           <button className="button subtle" onClick={() => router.push(routes.samples)}>
-            Cancel
+            {t("Cancel")}
           </button>
         }
       />
@@ -300,34 +302,34 @@ export default function SampleWizard() {
           {WIZARD_NAMES.map((n, i) => (
             <div className={`wizard-step ${i === step ? "current" : i < step ? "done" : ""}`} key={n}>
               <span>{i < step ? "✓" : i + 1}</span>
-              {n}
+              {t(n)}
             </div>
           ))}
         </div>
         {body}
         <div className="wizard-footer">
           <button className="button" onClick={saveDraft}>
-            {isEdit ? "Save Draft" : "Save as Draft"}
+            {isEdit ? t("Save Draft") : t("Save as Draft")}
           </button>
           <div className="footer-right">
             {step > 0 ? (
               <button className="button" onClick={() => changeStep(-1)}>
-                Back
+                {t("Back")}
               </button>
             ) : null}
             {step < 3 ? (
               <button className="button primary" onClick={() => changeStep(1)}>
-                Continue
+                {t("Continue")}
               </button>
             ) : (
               <button className="button primary" onClick={submitRequest}>
-                Submit Request
+                {t("Submit Request")}
               </button>
             )}
           </div>
         </div>
         <p className="mock-note" style={{ margin: "12px 0 0" }}>
-          Prototype only · no backend or real file upload is connected.
+          {t("Prototype only · no backend or real file upload is connected.")}
         </p>
       </div>
     </>

@@ -71,8 +71,10 @@ export function Input({ name, label, value, onChange, type = "text", options, pl
   return <Field label={label} name={name} span={span ?? (type === "textarea" ? 4 : 2)} required={required} error={error} hint={hint}>{control}</Field>;
 }
 
-export function Radios<T extends string>({ name, label, options, value, onChange, span, required, error, hint, disabled }: {
+export function Radios<T extends string>({ name, label, options, value, onChange, span, required, error, hint, disabled, renderLabel }: {
   name: string; label: ReactNode; options: readonly T[]; value: string; onChange: (value: T) => void; span?: Span; required?: boolean; error?: string; hint?: string; disabled?: boolean;
+  /** Overrides the visible text of an option; the stored value stays unchanged. */
+  renderLabel?: (option: T) => string;
 }) {
   const { t } = useI18n();
   return (
@@ -81,7 +83,7 @@ export function Radios<T extends string>({ name, label, options, value, onChange
         {options.map((option) => (
           <label className="reg-radio" key={option}>
             <input type="radio" name={name} checked={value === option} disabled={disabled} onChange={() => onChange(option)} />
-            <span>{t(option)}</span>
+            <span>{renderLabel ? renderLabel(option) : t(option)}</span>
           </label>
         ))}
       </div>

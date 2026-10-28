@@ -1,9 +1,9 @@
-"use client";
-
-import { useParams } from "next/navigation";
 import TaskScreen from "@/components/onboarding/TaskScreen";
+import { onboardingTasks } from "@/lib/onboarding";
 
-export default function Page() {
-  const { taskId } = useParams<{ taskId: string }>();
+export const generateStaticParams = () => onboardingTasks.map((task) => ({ taskId: task.id }));
+
+export default async function Page({ params }: PageProps<"/onboarding/tasks/[taskId]">) {
+  const { taskId } = await params;
   return <TaskScreen key={taskId} taskId={taskId} />;
 }

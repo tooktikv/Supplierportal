@@ -1,5 +1,7 @@
 "use client";
 
+import { useI18n } from "@/lib/i18n";
+
 const LINE_WIDTHS = [92, 100, 85, 96, 70, 100, 88, 60];
 
 /** Downloads a tiny generated PDF (ASCII text only) as a stand-in for the real document. */
@@ -28,11 +30,12 @@ export function downloadMockPdf(fileName: string, lines: string[]) {
 }
 
 export default function MockPdf({ title, fileName, pages, intro, signature }: { title: string; fileName: string; pages: number; intro?: string[]; signature?: { src: string; name: string } }) {
+  const { t } = useI18n();
   return (
-    <div className="mock-pdf" role="region" aria-label={`${title} PDF preview`}>
+    <div className="mock-pdf" role="region" aria-label={t("{title} PDF preview", { title })}>
       <div className="mock-pdf-bar">
         <span>▤ {fileName}</span>
-        <small>{pages} pages · Mock preview</small>
+        <small>{t("{pages} pages · Mock preview", { pages })}</small>
       </div>
       <div className="mock-pdf-pages" tabIndex={0}>
         {Array.from({ length: pages }, (_, index) => (
@@ -47,7 +50,7 @@ export default function MockPdf({ title, fileName, pages, intro, signature }: { 
                 <small>({signature.name})</small>
               </div>
             )}
-            <small>Page {index + 1} of {pages}</small>
+            <small>{t("Page {n} of {total}", { n: index + 1, total: pages })}</small>
           </div>
         ))}
       </div>

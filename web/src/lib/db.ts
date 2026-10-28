@@ -3,7 +3,7 @@ import { createInitialDb, initial } from "./data";
 import { policyFields } from "./policy";
 import type { Db } from "./types";
 import { buyerRequestOf } from "./sample-request-flow";
-import { normalizeScope3 } from "./srm";
+import { migrateSrmRecords, normalizeScope3 } from "./srm";
 
 export const DB_KEY = "northstar-supplier-portal-v1";
 
@@ -48,7 +48,13 @@ export function loadDb(): Db {
           : 2
         : 1
       : 0;
-    parsed.onboarding.riskAnswers = parsed.onboarding.riskAnswers || {};
+    if (parsed.onboarding.riskVersion !== 2) {
+      parsed.onboarding.riskAssessment = { answers: {} };
+      parsed.onboarding.riskVersion = 2;
+    }
+    parsed.onboarding.riskAssessment = parsed.onboarding.riskAssessment || { answers: {} };
+    parsed.onboarding.riskAssessment.answers = parsed.onboarding.riskAssessment.answers || {};
+    parsed.onboarding.tasks["sustainability-risk"] = parsed.onboarding.riskAssessment.submittedAt ? 1 : 0;
     parsed.onboarding.questionnaireAnswers = parsed.onboarding.questionnaireAnswers || {};
     if (parsed.onboarding.questionnaireVersion !== 2) {
       parsed.onboarding.questionnaireAnswers = {};
@@ -70,7 +76,8 @@ export function loadDb(): Db {
     parsed.onboarding.buyerInterest = parsed.onboarding.buyerInterest || clone(initial.onboarding.buyerInterest);
     parsed.requests = parsed.requests.map(policyFields);
     parsed.srm = parsed.srm || clone(initial.srm);
-    for (const entry of parsed.srm.ghg?.cfo || []) entry.scope3Category = normalizeScope3(entry.scope3Category);
+    migrateSrmRecords(parsed.srm, initial.srm);
+    for (const record of parsed.srm.ghg) for (const entry of record.cfo || []) entry.scope3Category = normalizeScope3(entry.scope3Category);
     for (const seeded of initial.requests) {
       if (!parsed.requests.some((request: Db["requests"][number]) => request.id === seeded.id)) parsed.requests.unshift(clone(seeded));
     }

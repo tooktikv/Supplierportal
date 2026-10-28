@@ -1,5 +1,7 @@
 "use client";
 
+import { useI18n } from "@/lib/i18n";
+
 interface FormFieldProps {
   label: string;
   name: string;
@@ -35,33 +37,34 @@ export default function FormField({
   placeholder,
   min,
 }: FormFieldProps) {
+  const { t } = useI18n();
   const current = value || "";
   let control;
   if (select) {
     control = (
       <select className="field-control" id={name} value={current} onChange={(e) => onChange(e.target.value)}>
-        <option value="">{placeholder || "Choose a category"}</option>
+        <option value="">{t(placeholder || "Choose a category")}</option>
         {select.map((c) => (
-          <option key={c}>{c}</option>
+          <option key={c} value={c}>{t(c)}</option>
         ))}
       </select>
     );
   } else if (textarea) {
-    control = <textarea className="field-control" id={name} placeholder={placeholder} value={current} onChange={(e) => onChange(e.target.value)} />;
+    control = <textarea className="field-control" id={name} placeholder={placeholder && t(placeholder)} value={current} onChange={(e) => onChange(e.target.value)} />;
   } else {
     control = (
-      <input className="field-control" id={name} type={type} value={current} readOnly={readOnly} placeholder={placeholder} min={min} onChange={(e) => onChange(e.target.value)} />
+      <input className="field-control" id={name} type={type} value={current} readOnly={readOnly} placeholder={placeholder && t(placeholder)} min={min} onChange={(e) => onChange(e.target.value)} />
     );
   }
   return (
     <div className={`form-field ${full ? "full" : ""} ${hasError ? "has-error" : ""}`} data-field={name}>
       <label htmlFor={name}>
-        {label}
+        {t(label)}
         {required ? <span className="required"> *</span> : null}
       </label>
       {control}
-      {hint ? <small>{hint}</small> : null}
-      <span className="form-error">{error}</span>
+      {hint ? <small>{t(hint)}</small> : null}
+      <span className="form-error">{t(error)}</span>
     </div>
   );
 }

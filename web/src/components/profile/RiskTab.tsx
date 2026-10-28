@@ -2,71 +2,65 @@
 
 import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui";
-import { riskAssessmentMessage, riskAssessmentState, riskTopics, taskCount } from "@/lib/onboarding";
+import { riskAssessmentState, riskTopics, taskCount } from "@/lib/onboarding";
+import { useI18n } from "@/lib/i18n";
+import { inherentRisk, topicScore } from "@/lib/risk";
 import { routes } from "@/lib/routes";
 import { usePortal } from "@/lib/store";
 
 export default function RiskTab() {
   const { db } = usePortal();
+  const { t } = useI18n();
   const router = useRouter();
   const state = riskAssessmentState(db);
+  const submitted = taskCount(db, "sustainability-risk") > 0;
+  const levels = inherentRisk(db.profile.onboardingCategory);
 
-  let body;
-  if (state !== "required") {
-    body = (
-      <div className="table-empty">
-        <div className="empty-icon">◈</div>
-        <h3>{state === "pending" ? "Pending questionnaire" : "Assessment not required"}</h3>
-        <p>{riskAssessmentMessage(db)}</p>
-        <button className="button" disabled>
-          Assessment unavailable
-        </button>
-      </div>
-    );
-  } else if (taskCount(db, "sustainability-risk")) {
-    body = (
+  return (
+    <>
+      <h2>
+        {t("Sustainability risk assessment")}
+        {state === "required" && !submitted && (
+          <>
+            {" "}
+            <button className="button primary" onClick={() => router.push(routes.task("sustainability-risk"))}>
+              {t("Start assessment")}
+            </button>
+          </>
+        )}
+      </h2>
       <div className="table-wrap">
         <table>
           <thead>
             <tr>
-              <th>Risk area</th>
-              <th>Supplier response</th>
-              <th>Assessment status</th>
+              <th>{t("Risk area")}</th>
+              <th>{t("Inherent risk")}</th>
+              <th>{t("Assessment result")}</th>
+              <th>{t("Assessment status")}</th>
             </tr>
           </thead>
           <tbody>
-            {riskTopics.map(([key, label]) => (
-              <tr key={key}>
-                <td>
-                  <strong>{label}</strong>
-                </td>
-                <td>{db.onboarding.riskAnswers[key] || "Not answered"}</td>
-                <td>
-                  <Badge status="Completed" />
-                </td>
-              </tr>
-            ))}
+            {riskTopics.map(([key, label]) => {
+              const isHigh = levels[key] === "High";
+              const score = topicScore(key, db.onboarding.riskAssessment.answers);
+              return (
+                <tr key={key}>
+                  <td>
+                    <strong>{t(label)}</strong>
+                  </td>
+                  <td>
+                    <Badge status={levels[key]} />
+                  </td>
+                  <td>{isHigh && submitted ? t("{correct}/{total} correct · {level}", { correct: score.correct, total: score.total, level: t(score.level) }) : "—"}</td>
+                  <td>
+                    <Badge status={!isHigh ? "Not required" : submitted ? "Completed" : "Pending"} />
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
-    );
-  } else {
-    body = (
-      <div className="table-empty">
-        <div className="empty-icon">◈</div>
-        <h3>Assessment not submitted</h3>
-        <p>Complete the sustainability risk assessment task to see your saved responses.</p>
-        <button className="button primary" onClick={() => router.push(routes.task("sustainability-risk"))}>
-          Start assessment
-        </button>
-      </div>
-    );
-  }
-
-  return (
-    <>
-      <h2>Sustainability risk assessment</h2>
-      {body}
     </>
   );
 }

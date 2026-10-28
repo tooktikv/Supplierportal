@@ -1,8 +1,9 @@
 // TEMPORARY demo shortcuts: set DEMO_TOOLS to false (or delete this file and its callers) before production.
 import { COMPANY, learningQuestions, supplierQuestionnaire, thaiLaborItems } from "./data";
-import { riskTopics } from "./onboarding";
+import { highRiskTopics } from "./onboarding";
+import { RISK_QUESTIONS } from "./risk";
 import type { SampleSubmission } from "./sample-request-flow";
-import { addTwoYears, HR_STANDARDS, PROJECT_TYPES, SCOPE3_CATEGORIES, SOURCING_OWNERS, type CfoEntry, type CfpEntry, type GhgState, type GovState, type HrState, type SrmProject } from "./srm";
+import { addTwoYears, HR_STANDARDS, PROJECT_TYPES, SCOPE3_CATEGORIES, SOURCING_OWNERS, type CfoEntry, type CfpEntry, type GhgRecord, type GovRecord, type HrRecord, type SrmProject } from "./srm";
 import { TLS_QUESTIONS } from "./tls-assessment";
 import type { Db, FileMeta } from "./types";
 
@@ -60,21 +61,18 @@ export function fillDemoAssessment(db: Db) {
   });
 }
 
-/** With `risk`, the first question is answered No so the risk assessment unlocks. */
-export function fillDemoQuestionnaire(db: Db, risk = false) {
-  let first = true;
+export function fillDemoQuestionnaire(db: Db) {
   for (const [key, , documents] of supplierQuestionnaire) {
     if (documents === "system") continue;
-    const no = risk && first;
-    first = false;
-    db.onboarding.questionnaireAnswers[key] = no
-      ? { answer: "No", documentType: "", files: [], note: "" }
-      : { answer: "Yes", documentType: Array.isArray(documents) ? documents[0] : "", files: [file(`${key}.pdf`)], note: "" };
+    db.onboarding.questionnaireAnswers[key] = { answer: "Yes", documentType: Array.isArray(documents) ? documents[0] : "", files: [file(`${key}.pdf`)], note: "" };
   }
 }
 
+/** Answers every High-risk topic with the correct choices. */
 export function fillDemoRisk(db: Db) {
-  for (const [key] of riskTopics) db.onboarding.riskAnswers[key] = "Medium";
+  for (const topic of highRiskTopics(db)) {
+    db.onboarding.riskAssessment.answers[topic] = Object.fromEntries(RISK_QUESTIONS[topic].map((item, index) => [index, item.answer]));
+  }
 }
 
 // Stand-ins for the Buyer-side system (SLM), which is not built yet.
@@ -112,7 +110,7 @@ export function fillDemoProject(project: SrmProject) {
   });
 }
 
-export function fillDemoGhg(ghg: GhgState) {
+export function fillDemoGhg(ghg: GhgRecord) {
   ghg.type = ghg.type || "CFO";
   ghg.cfo.forEach((entry: CfoEntry) =>
     Object.assign(entry, { certNo: "TGO CFO FY26-01-001", standard: "ISO 14064", scopeDate: "2025-12-31", scope1: "120.50", scope2: "80.25", scope3: "340.00", scope3Category: SCOPE3_CATEGORIES[0], production: "15000", unit: "tonne", files: [file("cfo-certificate.pdf")] }),
@@ -122,11 +120,11 @@ export function fillDemoGhg(ghg: GhgState) {
   );
 }
 
-export function fillDemoHumanRights(state: HrState) {
-  state.entries.forEach((entry) => Object.assign(entry, { standard: HR_STANDARDS[0], other: "", expiry: "2027-12-31", files: [file("human-rights-certificate.pdf")] }));
+export function fillDemoHumanRights(record: HrRecord) {
+  Object.assign(record, { standard: HR_STANDARDS[0], other: "", expiry: "2027-12-31", files: [file("human-rights-certificate.pdf")] });
 }
 
-export function fillDemoGovernance(gov: GovState) {
+export function fillDemoGovernance(gov: GovRecord) {
   Object.assign(gov, { cac: "Yes", cacExpiry: "2027-06-30", cacFiles: [file("cac-membership.pdf")], coc: "Yes", cocFiles: [file("code-of-conduct.pdf")] });
 }
 

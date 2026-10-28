@@ -5,9 +5,11 @@ import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui";
 import { learningLessons, learningQuestions, learningVideoId } from "@/lib/data";
 import { fmtDate } from "@/lib/docs";
+import { useI18n } from "@/lib/i18n";
 import { routes } from "@/lib/routes";
 import { usePortal } from "@/lib/store";
 import DemoFill from "@/components/DemoFill";
+import { useConfirm } from "@/components/ConfirmDialog";
 import { fillDemoLearning } from "@/lib/demo";
 
 interface QuizResult {
@@ -19,12 +21,13 @@ interface QuizResult {
 const STEP_TITLES = ["E-learning video", "Consent / Accept document", "Questionnaire"];
 
 function StepHeading({ number, title, complete, available, headingRef }: { number: number; title: string; complete: boolean; available: boolean; headingRef: RefObject<HTMLHeadingElement | null> }) {
+  const { t } = useI18n();
   return (
     <div className="learning-module-heading">
       <div>
-        <span className="eyebrow">STEP {number}/3</span>
+        <span className="eyebrow">{t("STEP {n}/3", { n: number })}</span>
         <h3 id="learning-step-title" tabIndex={-1} ref={headingRef}>
-          {title}
+          {t(title)}
         </h3>
       </div>
       <Badge status={complete ? "Completed" : available ? "In Progress" : "Not Started"} />
@@ -34,6 +37,8 @@ function StepHeading({ number, title, complete, available, headingRef }: { numbe
 
 export default function LearningFlow() {
   const { db, mutate, toast } = usePortal();
+  const { t } = useI18n();
+  const confirm = useConfirm();
   const router = useRouter();
   const [consentChecked, setConsentChecked] = useState(false);
   const headingRef = useRef<HTMLHeadingElement>(null);
@@ -94,9 +99,10 @@ export default function LearningFlow() {
     mutate((d) => void (d.onboarding.learningFlow.answers[questionIndex] = optionIndex));
   };
 
-  const submitLesson = () => {
+  const submitLesson = async () => {
     if (!flow.videoCompleted || !flow.consentAccepted || flow.result) return;
     if (learningQuestions.some((q, index) => !Number.isInteger(answers[index]) || !q.options[answers[index]])) return;
+    if (!(await confirm({ message: "Submit your answers to the policy questionnaire?", confirmLabel: "Submit" }))) return;
     const score = learningQuestions.reduce((sum, q, index) => sum + (answers[index] === q.answer ? 1 : 0), 0);
     const passed = score >= Math.ceil(learningQuestions.length * 0.8);
     mutate((d) => {
@@ -124,7 +130,7 @@ export default function LearningFlow() {
           {learningVideoId ? (
             <iframe
               className="learning-video-embed"
-              title="Sustainable Sourcing Policy and Supplier Guiding Principles video"
+              title={t("Sustainable Sourcing Policy and Supplier Guiding Principles video")}
               src={`https://www.youtube-nocookie.com/embed/${encodeURIComponent(learningVideoId)}`}
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
               allowFullScreen
@@ -133,13 +139,13 @@ export default function LearningFlow() {
           ) : (
             <>
               <span aria-hidden="true">▶</span>
-              <strong>Sustainable Sourcing Policy and Supplier Guiding Principles</strong>
-              <p>Add the course YouTube video ID in lib/data.ts to enable the in-page preview.</p>
+              <strong>{t("Sustainable Sourcing Policy and Supplier Guiding Principles")}</strong>
+              <p>{t("Add the course YouTube video ID in lib/data.ts to enable the in-page preview.")}</p>
             </>
           )}
         </div>
         <button className="button primary" onClick={completeVideo} disabled={flow.videoCompleted}>
-          {flow.videoCompleted ? "Video demo completed" : "Mark video complete (demo)"}
+          {flow.videoCompleted ? t("Video demo completed") : t("Mark video complete (demo)")}
         </button>
       </article>
     );
@@ -147,20 +153,20 @@ export default function LearningFlow() {
     section = (
       <article className="card learning-module">
         <StepHeading number={2} title="Consent / Accept document" complete={completed[1]} available={Boolean(flow.videoCompleted)} headingRef={headingRef} />
-        <h4>Sustainable Sourcing Policy and Supplier Guiding Principles</h4>
-        <div className="policy-document policy-preview" role="region" aria-label="Sustainable sourcing policy preview">
+        <h4>{t("Sustainable Sourcing Policy and Supplier Guiding Principles")}</h4>
+        <div className="policy-document policy-preview" role="region" aria-label={t("Sustainable sourcing policy preview")}>
           {learningLessons.map((lesson) => (
             <div key={lesson.id}>
-              <h4>{lesson.title}</h4>
-              <p className="lesson-summary">{lesson.summary}</p>
+              <h4>{t(lesson.title)}</h4>
+              <p className="lesson-summary">{t(lesson.summary)}</p>
               <ul className="lesson-points">
                 {lesson.points.map((point) => (
-                  <li key={point}>{point}</li>
+                  <li key={point}>{t(point)}</li>
                 ))}
               </ul>
             </div>
           ))}
-          <p className="mock-note">Original prototype policy summary, not an official policy or legal agreement.</p>
+          <p className="mock-note">{t("Original prototype policy summary, not an official policy or legal agreement.")}</p>
         </div>
         <label className="commitment-row">
           <input
@@ -170,12 +176,12 @@ export default function LearningFlow() {
             disabled={!flow.videoCompleted || flow.consentAccepted}
             onChange={(e) => setConsentChecked(e.target.checked)}
           />
-          <span>I have read and accept the Sustainable Sourcing Policy and Supplier Guiding Principles (mock version 1.0).</span>
+          <span>{t("I have read and accept the Sustainable Sourcing Policy and Supplier Guiding Principles (mock version 1.0).")}</span>
         </label>
         <button className="button primary" onClick={acceptConsent} disabled={!consentChecked || !flow.videoCompleted || flow.consentAccepted}>
-          {flow.consentAccepted ? "Document accepted" : "Accept document"}
+          {flow.consentAccepted ? t("Document accepted") : t("Accept document")}
         </button>
-        {flow.consentAccepted && <p className="mock-note">Accepted on {fmtDate(flow.acceptedAt)} · Mock version 1.0</p>}
+        {flow.consentAccepted && <p className="mock-note">{t("Accepted on {date} · Mock version 1.0", { date: fmtDate(flow.acceptedAt) })}</p>}
       </article>
     );
   } else {
@@ -192,9 +198,9 @@ export default function LearningFlow() {
                 <span>{Math.round((result.score / total) * 100)}%</span>
               </div>
               <div className="quiz-summary-copy">
-                <h4>{result.passed ? "Questionnaire passed" : "Not passed"}</h4>
+                <h4>{result.passed ? t("Questionnaire passed") : t("Not passed")}</h4>
                 <p>
-                  Pass mark: {passMark}/{total} (80%)
+                  {t("Pass mark: {pass}/{total} (80%)", { pass: passMark, total })}
                 </p>
               </div>
             </div>
@@ -204,9 +210,9 @@ export default function LearningFlow() {
                 return (
                   <div className="quiz-breakdown-row" key={question.text}>
                     <span>
-                      {index + 1}. {question.text}
+                      {index + 1}. {t(question.text)}
                     </span>
-                    <strong className={ok ? "correct-answer" : "incorrect-answer"}>{ok ? "Correct" : "Incorrect"}</strong>
+                    <strong className={ok ? "correct-answer" : "incorrect-answer"}>{ok ? t("Correct") : t("Incorrect")}</strong>
                   </div>
                 );
               })}
@@ -214,36 +220,36 @@ export default function LearningFlow() {
           </>
         ) : (
           <>
-            <p className="lesson-summary">Questions from Sustainable Sourcing Policy and Supplier Guiding Principles.</p>
+            <p className="lesson-summary">{t("Questions from Sustainable Sourcing Policy and Supplier Guiding Principles.")}</p>
             <div className="quiz-heading">
-              <h4>Knowledge check · {total} questions</h4>
+              <h4>{t("Knowledge check · {total} questions", { total })}</h4>
               <span>
-                Pass mark: {passMark}/{total} (80%)
+                {t("Pass mark: {pass}/{total} (80%)", { pass: passMark, total })}
               </span>
             </div>
             {learningQuestions.map((question, index) => (
               <fieldset className="quiz-question" disabled={locked} key={question.text}>
                 <legend>
-                  {index + 1}. {question.text}
+                  {index + 1}. {t(question.text)}
                 </legend>
                 <div className="quiz-options">
                   {question.options.map((option, optionIndex) => (
                     <label className="quiz-option" key={option}>
                       <input type="radio" name={`policy-q${index}`} value={optionIndex} checked={answers[index] === optionIndex} onChange={() => setAnswer(index, optionIndex)} />
-                      <span>{option}</span>
+                      <span>{t(option)}</span>
                     </label>
                   ))}
                 </div>
               </fieldset>
             ))}
             <button className="button primary" onClick={submitLesson} disabled={locked || !allAnswered}>
-              Submit answers
+              {t("Submit answers")}
             </button>
           </>
         )}
         {result && !result.passed && (
           <button className="button primary" onClick={retryLesson}>
-            Try again
+            {t("Try again")}
           </button>
         )}
       </article>
@@ -253,8 +259,8 @@ export default function LearningFlow() {
   return (
     <>
       {!result?.passed && <DemoFill onFill={() => mutate(fillDemoLearning)} />}
-      <div className="notice">Complete one activity at a time, then select Next. Progress and answers are saved only in this browser for this fictional course.</div>
-      <nav className="learning-stepper" aria-label="Learning steps">
+      <div className="notice">{t("Complete one activity at a time, then select Next. Progress and answers are saved only in this browser for this fictional course.")}</div>
+      <nav className="learning-stepper" aria-label={t("Learning steps")}>
         {STEP_TITLES.map((title, index) => (
           <button
             className={`learning-step ${index === activeStep ? "selected" : ""}`}
@@ -264,23 +270,23 @@ export default function LearningFlow() {
             onClick={() => setStep(index)}
           >
             <span className="learning-step-number">{completed[index] ? "✓" : index + 1}</span>
-            <span>{title}</span>
+            <span>{t(title)}</span>
           </button>
         ))}
       </nav>
       <div className="learning-modules">{section}</div>
       <div className="wizard-footer learning-navigation">
         <button className="button" onClick={() => setStep(activeStep - 1)} disabled={activeStep === 0}>
-          Back
+          {t("Back")}
         </button>
-        <span className="mock-note">Step {activeStep + 1} of 3</span>
+        <span className="mock-note">{t("Step {n} of 3", { n: activeStep + 1 })}</span>
         {activeStep < 2 ? (
           <button className="button primary" onClick={() => setStep(activeStep + 1)} disabled={!completed[activeStep]}>
-            Next →
+            {t("Next →")}
           </button>
         ) : (
           <button className="button primary" onClick={() => router.push(routes.onboarding)} disabled={!result?.passed}>
-            Finish
+            {t("Finish")}
           </button>
         )}
       </div>

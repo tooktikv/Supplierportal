@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { PageHeading } from "@/components/ui";
 import { addRequestDocuments, fmtDate } from "@/lib/docs";
+import { useI18n } from "@/lib/i18n";
 import { isPhysical, transition } from "@/lib/policy";
 import { routes } from "@/lib/routes";
 import { usePortal } from "@/lib/store";
@@ -17,6 +18,7 @@ const stripFile = ({ name, size, type, expiry }: FileMeta): FileMeta => ({ name,
 
 export default function RespondForm({ id }: { id: string }) {
   const { db, mutate, toast } = usePortal();
+  const { t } = useI18n();
   const router = useRouter();
   const confirm = useConfirm();
   const [comments, setComments] = useState("");
@@ -74,44 +76,44 @@ export default function RespondForm({ id }: { id: string }) {
         desc={`${r.id} · ${r.name}`}
         action={
           <button className="button subtle" onClick={() => router.push(routes.sample(r.id))}>
-            Cancel
+            {t("Cancel")}
           </button>
         }
       />
       <div className="detail-layout">
         <div className="card wizard-card">
-          <h2>Evaluator feedback</h2>
+          <h2>{t("Evaluator feedback")}</h2>
           <div className="feedback">
-            <strong>Requested changes</strong>
-            {r.feedback || r.requiredCorrections || "Please provide the requested information."}
+            <strong>{t("Requested changes")}</strong>
+            {t(r.feedback || r.requiredCorrections || "Please provide the requested information.")}
             <br />
             <br />
-            <strong>Required corrections</strong>
-            {r.requiredCorrections || "Review feedback and provide an update."}
+            <strong>{t("Required corrections")}</strong>
+            {t(r.requiredCorrections || "Review feedback and provide an update.")}
           </div>
           <div className="notice warning" style={{ marginTop: 14 }}>
-            Your original request and previous decisions will be preserved. Your supplier response does not approve or reject the sample.
+            {t("Your original request and previous decisions will be preserved. Your supplier response does not approve or reject the sample.")}
           </div>
           <div className="form-grid">
             <div className={`form-field full ${commentError ? "has-error" : ""}`}>
               <label htmlFor="response-comments">
-                Response comments <span className="required">*</span>
+                {t("Response comments")} <span className="required">*</span>
               </label>
               <textarea
                 id="response-comments"
                 className="field-control"
                 rows={4}
-                placeholder="Describe the updates you are providing..."
+                placeholder={t("Describe the updates you are providing...")}
                 value={comments}
                 onChange={(e) => {
                   setComments(e.target.value);
                   setCommentError(false);
                 }}
               />
-              <span className="form-error">Add a response comment before submitting.</span>
+              <span className="form-error">{t("Add a response comment before submitting.")}</span>
             </div>
             <div className="form-field full">
-              <label>Updated attachments</label>
+              <label>{t("Updated attachments")}</label>
               <UploadBox
                 files={files}
                 helper="PDF, DOCX, JPG or PNG · max 10 MB per file. Mock attachment selection only."
@@ -122,36 +124,36 @@ export default function RespondForm({ id }: { id: string }) {
             </div>
             {isPhysical(r.type) ? (
               <>
-                <div className="form-divider">Revised physical sample information</div>
+                <div className="form-divider">{t("Revised physical sample information")}</div>
                 <FormField label="Updated sample quantity" name="responseQuantity" type="number" value={quantity ?? r.quantity ?? ""} onChange={setQuantity} />
                 <FormField label="Updated delivery / handling notes" name="responseDelivery" textarea full value={delivery ?? r.instructions ?? ""} onChange={setDelivery} />
               </>
             ) : null}
           </div>
           <div className="wizard-footer">
-            <span className="mock-note">Linked to original request {r.id}</span>
+            <span className="mock-note">{t("Linked to original request {id}", { id: r.id })}</span>
             <button className="button primary" onClick={submitResponse}>
-              {resubmit ? "Submit Resubmission" : "Submit Response"}
+              {resubmit ? t("Submit Resubmission") : t("Submit Response")}
             </button>
           </div>
         </div>
         <aside className="card detail-section">
-          <h2>Change summary</h2>
+          <h2>{t("Change summary")}</h2>
           <div className="activity-list">
             {(r.revisions || []).length ? (
               (r.revisions || []).map((v, i) => (
                 <div className="activity" key={`${v.date}-${i}`}>
                   <span className="activity-dot" />
                   <div>
-                    <strong>Previous response {i + 1}</strong>
+                    <strong>{t("Previous response {n}", { n: i + 1 })}</strong>
                     <small>
-                      {fmtDate(v.date)} · {v.files?.length || 0} updated file(s)
+                      {fmtDate(v.date)} · {t("{n} updated file(s)", { n: v.files?.length || 0 })}
                     </small>
                   </div>
                 </div>
               ))
             ) : (
-              <p className="mock-note">No previous responses. This will be the first revision.</p>
+              <p className="mock-note">{t("No previous responses. This will be the first revision.")}</p>
             )}
           </div>
         </aside>

@@ -1,6 +1,7 @@
 "use client";
 
 import { Badge } from "@/components/ui";
+import { useI18n } from "@/lib/i18n";
 import { usePortal } from "@/lib/store";
 import ProfileEntryForm from "./ProfileEntryForm";
 
@@ -13,6 +14,7 @@ interface Props {
 
 export default function ContactsTab({ adding, onAdd, onCancel, onSaved }: Props) {
   const { db, mutate, toast } = usePortal();
+  const { t } = useI18n();
 
   const save = (v: Record<string, string>) => {
     mutate((draft) => {
@@ -34,9 +36,9 @@ export default function ContactsTab({ adding, onAdd, onCancel, onSaved }: Props)
   return (
     <>
       <h2>
-        Contact persons{" "}
+        {t("Contact persons")}{" "}
         <button className="button" onClick={onAdd}>
-          ＋ Add contact
+          ＋ {t("Add contact")}
         </button>
       </h2>
       {adding && (
@@ -58,22 +60,22 @@ export default function ContactsTab({ adding, onAdd, onCancel, onSaved }: Props)
         <table>
           <thead>
             <tr>
-              <th>Contact type</th>
-              <th>Name</th>
-              <th>Role</th>
-              <th>Email</th>
-              <th>Phone</th>
-              <th>Status</th>
+              <th>{t("Contact type")}</th>
+              <th>{t("Name")}</th>
+              <th>{t("Role")}</th>
+              <th>{t("Email")}</th>
+              <th>{t("Phone")}</th>
+              <th>{t("Status")}</th>
             </tr>
           </thead>
           <tbody>
             {db.profile.contacts.map((c, i) => (
               <tr key={i}>
-                <td>{c.type || (i === 0 ? "Company owner" : "Contact person")}</td>
+                <td>{t(c.type || (i === 0 ? "Company owner" : "Contact person"))}</td>
                 <td>
                   <strong>{c.name}</strong>
                 </td>
-                <td>{c.role}</td>
+                <td>{t(c.role)}</td>
                 <td>{c.email}</td>
                 <td>{c.phone}</td>
                 <td>

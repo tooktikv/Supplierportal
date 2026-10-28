@@ -1,6 +1,7 @@
 "use client";
 
 import { InfoItem } from "@/components/ui";
+import { useI18n } from "@/lib/i18n";
 import { usePortal } from "@/lib/store";
 import ProfileEntryForm from "./ProfileEntryForm";
 
@@ -13,6 +14,7 @@ interface Props {
 
 export default function CompanyInfoTab({ editing, onEdit, onCancel, onSaved }: Props) {
   const { db, mutate, toast } = usePortal();
+  const { t } = useI18n();
   const p = db.profile;
 
   const save = (v: Record<string, string>) => {
@@ -35,10 +37,10 @@ export default function CompanyInfoTab({ editing, onEdit, onCancel, onSaved }: P
   return (
     <>
       <h2>
-        Company information{" "}
+        {t("Company information")}{" "}
         {!editing && (
           <button className="button" onClick={onEdit}>
-            Edit information
+            {t("Edit information")}
           </button>
         )}
       </h2>
@@ -65,7 +67,7 @@ export default function CompanyInfoTab({ editing, onEdit, onCancel, onSaved }: P
           <InfoItem label="Email" value={p.email} />
           <InfoItem label="Phone" value={p.phone} />
           <InfoItem label="Registered address" value={p.site} />
-          <InfoItem label="Product categories" value={p.categories.join(", ")} />
+          <InfoItem label="Product categories" value={p.categories.map((category) => t(category)).join(", ")} />
         </div>
       )}
     </>

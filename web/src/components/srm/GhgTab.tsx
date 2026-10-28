@@ -2,36 +2,64 @@
 
 import { useState } from "react";
 import { Badge } from "@/components/ui";
-import { fmtDate } from "@/lib/docs";
+import { useConfirm } from "@/components/ConfirmDialog";
+import { fmtDate, todayIso } from "@/lib/docs";
 import { usePortal } from "@/lib/store";
 import { useI18n } from "@/lib/i18n";
 import DemoFill from "@/components/DemoFill";
 import { fillDemoGhg } from "@/lib/demo";
-import { emptyCfo, emptyCfp, ghgErrors, MASTER_UNITS, SCOPE3_CATEGORIES, type CfoEntry, type CfpEntry, type GhgState } from "@/lib/srm";
+import { emptyCfo, emptyCfp, emptyGhg, ghgErrors, MASTER_UNITS, SCOPE3_CATEGORIES, type CfoEntry, type CfpEntry, type GhgRecord } from "@/lib/srm";
 import { AddButton, Footer, Input, Radios, Section, Upload } from "./fields";
+import RecordList from "./RecordList";
+
+const num = (value: string) => Number(value) || 0;
+const fmtTotal = (value: number) => value.toLocaleString("en-US", { maximumFractionDigits: 2 });
 
 export default function GhgTab() {
   const { db, mutate, toast } = usePortal();
   const { t } = useI18n();
+  const confirm = useConfirm();
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const ghg = db.srm.ghg;
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const records = db.srm.ghg;
+  const ghg = records.find((item) => item.id === editingId);
 
-  const update = (change: (value: GhgState) => void) => {
+  const update = (change: (value: GhgRecord) => void) => {
     setErrors({});
     mutate((d) => {
-      change(d.srm.ghg);
-      d.srm.ghg.submittedAt = undefined;
+      const current = d.srm.ghg.find((item) => item.id === editingId);
+      if (!current) return;
+      change(current);
+      current.status = "Draft";
+      current.updated = todayIso();
     });
+  };
+  const add = () => {
+    const created = emptyGhg();
+    mutate((d) => void d.srm.ghg.unshift(created));
+    setErrors({});
+    setEditingId(created.id);
+  };
+  const remove = async (id: string) => {
+    if (!(await confirm({ title: "Delete record", message: "Delete this GHG certification record?", confirmLabel: "Delete", tone: "danger" }))) return;
+    mutate((d) => void (d.srm.ghg = d.srm.ghg.filter((entry) => entry.id !== id)));
+    toast("Record deleted.");
   };
   const patchCfo = (id: string, change: (entry: CfoEntry) => void) => update((draft) => { const entry = draft.cfo.find((item) => item.id === id); if (entry) change(entry); });
   const patchCfp = (id: string, change: (entry: CfpEntry) => void) => update((draft) => { const entry = draft.cfp.find((item) => item.id === id); if (entry) change(entry); });
 
-  const submit = () => {
+  const submit = async () => {
+    if (!ghg) return;
     const next = ghgErrors(ghg);
     setErrors(next);
     if (Object.keys(next).length) return toast("Complete the highlighted fields before submitting.");
-    mutate((d) => void (d.srm.ghg.submittedAt = new Date().toISOString()));
+    if (!(await confirm({ message: "Submit your GHG emission reduction data?", confirmLabel: "Submit" }))) return;
+    mutate((d) => {
+      const current = d.srm.ghg.find((item) => item.id === ghg.id);
+      if (current) Object.assign(current, { status: "Submitted", updated: todayIso() });
+    });
     toast("GHG emission reduction data submitted.");
+    setEditingId(null);
   };
 
   const cfo = (entry: CfoEntry, key: "certNo" | "scopeDate" | "scope1" | "scope2" | "scope3" | "production") => ({
@@ -42,10 +70,35 @@ export default function GhgTab() {
   });
   const removeButton = (onClick: () => void) => <button className="button" onClick={onClick}>{t("Remove set")}</button>;
 
+  if (!ghg) {
+    const rows = records.map((item) => {
+      const sets = item.type === "CFO" ? item.cfo : item.type === "CFP" ? item.cfp : [];
+      const first = sets[0];
+      const detail = item.type === "CFO"
+        ? `${fmtTotal(item.cfo.reduce((sum, entry) => sum + num(entry.scope1) + num(entry.scope2) + num(entry.scope3), 0))} tCO2e`
+        : item.type === "CFP" ? item.cfp.map((entry) => entry.product).filter(Boolean).join(", ") || "—" : "—";
+      return {
+        id: item.id, updated: item.updated, status: item.status,
+        cells: [
+          <strong key="type">{item.type === "CFO" ? t("Organizational (CFO)") : item.type === "CFP" ? t("Product (CFP)") : t("Not selected")}</strong>,
+          <span key="cert">{first?.certNo || "—"}{sets.length > 1 && <small>{t("{n} certification sets", { n: sets.length })}</small>}</span>,
+          first?.standard || "—",
+          detail,
+        ],
+      };
+    });
+    return (
+      <RecordList title="GHG emission reduction" description="Carbon Footprint certifications (CFO / CFP) you have reported. Create a record to add or update one." addLabel="+ Create GHG record"
+        headings={["Certification type", "Certificate no.", "Standard", "Emissions / product"]} rows={rows}
+        emptyTitle="No GHG records yet" emptyText="Create a record to report your Carbon Footprint certification."
+        onAdd={add} onEdit={(id) => { setErrors({}); setEditingId(id); }} onDelete={remove} />
+    );
+  }
+
   return (
     <div className="reg-main">
       <DemoFill onFill={() => update(fillDemoGhg)} />
-      <Section num={1} title="Carbon Footprint certification" hint="Changes are saved automatically as a draft until you submit." extra={<Badge status={ghg.submittedAt ? "Submitted" : "Draft"} />}>
+      <Section num={1} title="Carbon Footprint certification" hint="Changes are saved automatically as a draft until you submit." extra={<Badge status={ghg.status} />}>
         <Radios name="ghg-type" label="ประเภทของการรับรอง Carbon Footprint" required options={["CFO", "CFP"] as const} value={ghg.type} error={errors.type}
           hint="CFO = Carbon Footprint ขององค์กร · CFP = Carbon Footprint ของผลิตภัณฑ์" onChange={(value) => update((draft) => void (draft.type = value))} />
       </Section>
@@ -92,7 +145,8 @@ export default function GhgTab() {
         </div>
       )}
 
-      <Footer note={ghg.submittedAt ? t("Submitted on {date}", { date: fmtDate(ghg.submittedAt) }) : t("Not submitted")}>
+      <Footer note={ghg.status === "Submitted" ? t("Submitted on {date}", { date: fmtDate(ghg.updated) }) : t("Not submitted")}>
+        <button className="button" onClick={() => setEditingId(null)}>{t("Back to list")}</button>
         <button className="button primary" onClick={submit}>{t("Submit")}</button>
       </Footer>
     </div>

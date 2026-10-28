@@ -1,4 +1,5 @@
 import { trackFile } from "@/lib/docs";
+import { getLang, translate } from "@/lib/i18n";
 import { isDigital, isPhysical, policyFields } from "@/lib/policy";
 import type { WizardState } from "@/lib/store";
 import type { Db, FileMeta, RequestRec } from "@/lib/types";
@@ -87,12 +88,12 @@ export function pickFiles(list: FileList | null, toast: (message: string) => voi
   const valid: FileMeta[] = [];
   for (const file of Array.from(list || [])) {
     if (file.size > 10 * 1024 * 1024) {
-      toast(`${file.name} exceeds the 10 MB limit.`);
+      toast(translate("{name} exceeds the 10 MB limit.", getLang(), { name: file.name }));
       continue;
     }
     const extension = (file.name.split(".").pop() ?? "").toLowerCase();
     if (!ALLOWED_MIME.includes(file.type) && !ALLOWED_EXT.includes(extension)) {
-      toast(`${file.name} is not a supported file type.`);
+      toast(translate("{name} is not a supported file type.", getLang(), { name: file.name }));
       continue;
     }
     valid.push(trackFile(file, file.type || extension));

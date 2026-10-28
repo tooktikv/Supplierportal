@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Badge, PageHeading } from "@/components/ui";
 import { addRequestDocuments, todayIso } from "@/lib/docs";
+import { useI18n } from "@/lib/i18n";
 import { transition } from "@/lib/policy";
 import { routes } from "@/lib/routes";
 import { buyerRequestOf, canSubmitSample, sampleDocumentsRequired, sampleSubmissionErrors, sampleSubmissionOf, type SampleSubmission } from "@/lib/sample-request-flow";
@@ -18,6 +19,7 @@ import UploadBox from "./UploadBox";
 
 function SubmissionEditor({ request }: { request: RequestRec }) {
   const { db, mutate, toast } = usePortal();
+  const { t } = useI18n();
   const router = useRouter();
   const confirm = useConfirm();
   const [submission, setSubmission] = useState(() => ({
@@ -86,16 +88,16 @@ function SubmissionEditor({ request }: { request: RequestRec }) {
 
   return (
     <>
-      <PageHeading title="Provide sample information" desc={`${request.id} · ${request.name}`} action={<button className="button" onClick={() => router.push(routes.samples)}>Back to requests</button>} />
-      {!editable ? <div className="notice">This request has already been submitted. <button className="text-link" onClick={() => router.push(routes.sample(request.id))}>View details</button></div> : (
+      <PageHeading title="Provide sample information" desc={`${request.id} · ${request.name}`} action={<button className="button" onClick={() => router.push(routes.samples)}>{t("Back to requests")}</button>} />
+      {!editable ? <div className="notice">{t("This request has already been submitted.")} <button className="text-link" onClick={() => router.push(routes.sample(request.id))}>{t("View details")}</button></div> : (
         <>
           <DemoFill onFill={() => { setErrors({}); setSubmission((current) => ({ ...current, ...demoSampleSubmission(current, { onsite, documentsRequired }) })); }} />
           <div className="sample-response-layout">
             <aside className="sample-request-context"><BuyerRequestBrief request={request} /><Badge status={request.status} /></aside>
             <div className="sample-response-fields">
-              {request.feedback && <div className="notice warning"><strong>Buyer feedback</strong><p className="sample-copy">{request.feedback}</p>{request.requiredCorrections && <p className="sample-copy">{request.requiredCorrections}</p>}</div>}
+              {request.feedback && <div className="notice warning"><strong>{t("Buyer feedback")}</strong><p className="sample-copy">{t(request.feedback)}</p>{request.requiredCorrections && <p className="sample-copy">{t(request.requiredCorrections)}</p>}</div>}
               <section className="sample-form-section">
-                <h2>Sample product</h2>
+                <h2>{t("Sample product")}</h2>
                 <div className="form-grid">
                   <FormField label="Sample product name" {...field("productName")} required />
                   <FormField label="Supplier product code / model" {...field("productCode")} required />
@@ -109,16 +111,16 @@ function SubmissionEditor({ request }: { request: RequestRec }) {
                 </div>
               </section>
               <section className="sample-form-section" data-field="files">
-                <h2>Sample documents {documentsRequired ? <span className="required">*</span> : <small className="helper">(optional)</small>}</h2>
+                <h2>{t("Sample documents")} {documentsRequired ? <span className="required">*</span> : <small className="helper">{t("(optional)")}</small>}</h2>
                 <UploadBox files={submission.files} helper="Specification, catalog, test report or COA · PDF, DOCX, JPG or PNG · max 10 MB per file" labelRemove
                   onAdd={(files) => update("files", [...submission.files, ...files])}
                   onExpiry={(index, expiry) => update("files", submission.files.map((file, position) => position === index ? { ...file, expiry } : file))}
                   onRemove={(index) => update("files", submission.files.filter((_, position) => position !== index))} />
-                {errors.files && <p className="sample-field-error" role="alert">{errors.files}</p>}
+                {errors.files && <p className="sample-field-error" role="alert">{t(errors.files)}</p>}
               </section>
               {onsite && <section className="sample-form-section">
-                <h2>Proposed onsite review</h2>
-                <p className="helper">Pending Buyer review and appointment confirmation. Time is local to the site.</p>
+                <h2>{t("Proposed onsite review")}</h2>
+                <p className="helper">{t("Pending Buyer review and appointment confirmation. Time is local to the site.")}</p>
                 <div className="form-grid">
                   <FormField label="Site / factory name" {...field("siteName")} required full />
                   <FormField label="Onsite review address" {...field("siteAddress")} required textarea full />
@@ -128,7 +130,7 @@ function SubmissionEditor({ request }: { request: RequestRec }) {
                 </div>
               </section>}
               <section className="sample-form-section">
-                <h2>{onsite ? "Onsite coordinator" : "Supplier contact"}</h2>
+                <h2>{onsite ? t("Onsite coordinator") : t("Supplier contact")}</h2>
                 <div className="form-grid">
                   <FormField label="Contact name" {...field("contactName")} required />
                   <FormField label="Contact email" {...field("contactEmail")} type="email" required />
@@ -138,7 +140,7 @@ function SubmissionEditor({ request }: { request: RequestRec }) {
               </section>
             </div>
           </div>
-          <div className="sample-submit-bar"><button className="button" onClick={() => save(false)}>Save draft</button><button className="button primary" onClick={() => save(true)}>Submit to Buyer</button></div>
+          <div className="sample-submit-bar"><button className="button" onClick={() => save(false)}>{t("Save draft")}</button><button className="button primary" onClick={() => save(true)}>{t("Submit to Buyer")}</button></div>
         </>
       )}
     </>

@@ -74,10 +74,10 @@ export default function PortalShell({ children }: { children: ReactNode }) {
         }}
       >
         <div className="brand">
-          <div className="brand-mark">N</div>
-          <div className="brand-name">
-            northstar<small>{t("Supplier portal")}</small>
+          <div className="brand-mark" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="currentColor"><rect x="1" y="1" width="7" height="7" rx="2" /><rect x="10" y="1" width="7" height="7" rx="2" opacity=".65" /><rect x="1" y="10" width="7" height="7" rx="2" opacity=".65" /><rect x="10" y="10" width="7" height="7" rx="2" /></svg>
           </div>
+          <div className="brand-name">Supplier Portal</div>
         </div>
         <div className="company-mini">
           <span>{t("SUPPLIER ACCOUNT")}</span>

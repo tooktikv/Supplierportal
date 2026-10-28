@@ -84,21 +84,19 @@ export default function OnboardingPage() {
             const complete = done >= task.required;
             const blockedStatus = !registered
               ? "Pending registration"
-              : isRisk
-                ? riskAssessmentState(db) === "pending"
-                  ? "Pending questionnaire"
-                  : "Not required"
+              : isRisk && riskAssessmentState(db) === "not-required"
+                ? "Not required"
                 : "Locked";
             const description = disabled
               ? blockedMessage
               : isRisk
-                ? "Risk identified in your questionnaire. Complete this additional assessment."
+                ? "Your Inherent Risk is rated High in some areas. Complete the assessment for each of them."
                 : task.description;
             return (
               <article className={`task-card ${disabled ? "task-disabled" : ""} ${nextUp?.id === task.id ? "task-next" : ""}`} key={task.id}>
                 <div className={`task-step ${complete ? "done" : ""}`} aria-label={t("Step {n}", { n: index + 1 })}>{complete ? "✓" : index + 1}</div>
                 <div className="task-content">
-                  <span className="eyebrow">{t("Step {n} · {category}", { n: index + 1, category: t(task.category) })}{task.conditional ? ` · ${t("only if a risk is flagged")}` : ""}</span>
+                  <span className="eyebrow">{t("Step {n} · {category}", { n: index + 1, category: t(task.category) })}{task.conditional ? ` · ${t("only if a risk is rated High")}` : ""}</span>
                   <h3>{t(task.title)}</h3>
                   <p>{t(description)}</p>
                   {disabled ? (

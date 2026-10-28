@@ -1,13 +1,15 @@
 "use client";
 
-import type { ChangeEvent } from "react";
+import { Fragment, type ChangeEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui";
 import DemoFill from "@/components/DemoFill";
+import { useConfirm } from "@/components/ConfirmDialog";
 import { Footer, Input, Radios, Section } from "@/components/srm/fields";
 import { supplierQuestionnaire } from "@/lib/data";
 import { fillDemoQuestionnaire } from "@/lib/demo";
 import { pushDocument, todayIso, trackFile } from "@/lib/docs";
+import { useI18n } from "@/lib/i18n";
 import {
   questionnaireAvailable,
   questionnaireComplete,
@@ -21,10 +23,14 @@ import type { FileMeta } from "@/lib/types";
 
 const MAX_PDF_BYTES = 5 * 1024 * 1024;
 const stripNumber = (question: string) => question.replace(/^\d+\.\s*/, "");
+/** Question index where each group of the form starts. */
+const GROUPS: Record<number, string> = { 0: "Quality and food safety", 6: "Sustainability", 8: "Other areas" };
 
 export default function SupplierQuestionnaire({ done }: { done: number }) {
   const { db, mutate, toast } = usePortal();
+  const { t, lang } = useI18n();
   const router = useRouter();
+  const confirm = useConfirm();
   const answers = db.onboarding.questionnaireAnswers;
   const userQuestions = supplierQuestionnaire.filter(([, , type]) => type !== "system");
   const answered = userQuestions.filter(([key]) => ["Yes", "No"].includes(answers[key]?.answer)).length;
@@ -65,17 +71,17 @@ export default function SupplierQuestionnaire({ done }: { done: number }) {
     for (const file of selected) {
       const isPdf = file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
       if (!isPdf) {
-        toast(`${file.name} is not a PDF file.`);
+        toast(t("{name} is not a PDF file.", { name: file.name }));
         continue;
       }
       if (file.size > MAX_PDF_BYTES) {
-        toast(`${file.name} exceeds the 5 MB limit.`);
+        toast(t("{name} exceeds the 5 MB limit.", { name: file.name }));
         continue;
       }
       accepted.push(trackFile(file, "application/pdf"));
     }
     const remaining = limit - (response.files || []).length;
-    if (accepted.length > remaining) toast(`This question allows up to ${limit} file${limit === 1 ? "" : "s"}.`);
+    if (accepted.length > remaining) toast(t(limit === 1 ? "This question allows up to 1 file." : "This question allows up to {limit} files.", { limit }));
     mutate((d) => {
       const r = d.onboarding.questionnaireAnswers[key];
       r.files = [...(r.files || []), ...accepted.slice(0, Math.max(0, remaining))];
@@ -96,14 +102,18 @@ export default function SupplierQuestionnaire({ done }: { done: number }) {
 
   const setNote = (key: string, value: string) => {
     if (taskCount(db, "supplier-questionnaire")) return;
-    if (!["Yes", "No"].includes(answers[key]?.answer)) return;
-    mutate((d) => void (d.onboarding.questionnaireAnswers[key].note = value.slice(0, 5000)));
+    mutate((d) => {
+      const response = d.onboarding.questionnaireAnswers[key] || { answer: "", documentType: "", files: [], note: "" };
+      response.note = value.slice(0, 5000);
+      d.onboarding.questionnaireAnswers[key] = response;
+    });
   };
 
-  const submit = () => {
+  const submit = async () => {
     if (!questionnaireAvailable(db)) return toast(taskBlockedMessage(db, "supplier-questionnaire"));
     if (taskCount(db, "supplier-questionnaire")) return toast("The questionnaire has already been submitted.");
     if (!complete) return toast("Answer every required question and attach the conditional PDF documents before submitting.");
+    if (!(await confirm({ message: "Submit your questionnaire? You cannot change your answers after submitting.", confirmLabel: "Submit" }))) return;
     mutate((d) => {
       supplierQuestionnaire.forEach(([key, question]) => {
         const response = d.onboarding.questionnaireAnswers[key];
@@ -116,13 +126,7 @@ export default function SupplierQuestionnaire({ done }: { done: number }) {
       });
       d.onboarding.tasks["supplier-questionnaire"] = 1;
     });
-    // Same rule as riskAssessmentState() once the questionnaire counts as submitted.
-    const riskRequired = supplierQuestionnaire.some(([key, , type]) => type !== "system" && answers[key]?.answer === "No");
-    toast(
-      riskRequired
-        ? "Questionnaire submitted. Risk identified: complete the Sustainability Risk Assessment."
-        : "Questionnaire submitted. No additional risk assessment is required.",
-    );
+    toast("Questionnaire submitted.");
     router.push(routes.onboarding);
   };
 
@@ -137,12 +141,12 @@ export default function SupplierQuestionnaire({ done }: { done: number }) {
 
   return (
     <div className="reg-main">
-      {!locked && <DemoFill onFill={() => mutate((d) => fillDemoQuestionnaire(d))} secondary={{ label: "Fill with a risk (one No answer)", onFill: () => mutate((d) => fillDemoQuestionnaire(d, true)) }} />}
+      {!locked && <DemoFill onFill={() => mutate((d) => fillDemoQuestionnaire(d))} />}
       <div className="card section-card qn-summary">
         <div className="qn-summary-top">
           <div>
-            <h2>{answered} / {userQuestions.length} answered</h2>
-            <p className="helper">Answer Yes or No. When Yes is selected, provide the required PDF evidence. Files are represented by metadata only in this browser and are not uploaded.</p>
+            <h2>{t("{answered} / {total} answered", { answered, total: userQuestions.length })}</h2>
+            <p className="helper">{t("Answer Yes or No. When Yes is selected, provide the required PDF evidence. Files are represented by metadata only in this browser and are not uploaded.")}</p>
           </div>
         </div>
         <div className="progress-track"><div className="progress-fill" style={{ width: `${(answered / userQuestions.length) * 100}%` }} /></div>
@@ -150,12 +154,16 @@ export default function SupplierQuestionnaire({ done }: { done: number }) {
 
       {supplierQuestionnaire.map(([key, question, documents, maxFiles], index) => {
         const title = stripNumber(question);
+        const heading = GROUPS[index] ? <h3 className="qn-group">{t(GROUPS[index])}</h3> : null;
         if (documents === "system") {
           const value = questionnaireSystemAnswer(db, key);
           return (
-            <Section key={key} num={index + 1} title={title} hint="System generated · not editable" extra={<Badge status={value || "Pending"} />}>
-              {null}
-            </Section>
+            <Fragment key={key}>
+              {heading}
+              <Section num={index + 1} title={title} hint="System generated · not editable" extra={<span className={`status ${value === "Yes" ? "green" : "amber"}`}>{lang === "th" ? (value === "Yes" ? "มี" : "ไม่มี") : value}</span>}>
+                {null}
+              </Section>
+            </Fragment>
           );
         }
         const response = answers[key] || { answer: "", documentType: "", files: [], note: "" };
@@ -164,8 +172,10 @@ export default function SupplierQuestionnaire({ done }: { done: number }) {
         const note: string = response.note || "";
         const ok = questionDone(key, documents, limit);
         return (
-          <Section key={key} num={index + 1} title={title} extra={<Badge status={ok ? "Completed" : "Pending"} />}>
-            <Radios name={`qn-${key}`} label="Your answer" required options={["Yes", "No"] as const} value={response.answer || ""} disabled={locked} onChange={(value) => setAnswer(key, value)} />
+          <Fragment key={key}>
+          {heading}
+          <Section num={index + 1} title={title} extra={<Badge status={ok ? "Completed" : "Pending"} />}>
+            <Radios name={`qn-${key}`} label="Your answer" required options={["Yes", "No"] as const} value={response.answer || ""} disabled={locked} renderLabel={(option) => (lang === "th" ? (option === "Yes" ? "มี" : "ไม่มี") : option)} onChange={(value) => setAnswer(key, value)} />
             {response.answer === "Yes" && Array.isArray(documents) && (
               <Input name={`qn-${key}-doctype`} label="Document type" type="select" options={documents} value={response.documentType || ""} placeholder="Select a document type" required disabled={locked} onChange={(value) => setDocumentType(key, value)} />
             )}
@@ -175,15 +185,15 @@ export default function SupplierQuestionnaire({ done }: { done: number }) {
                   <div className="doc-card-head">
                     <span className="doc-icon">▤</span>
                     <div>
-                      <strong>Supporting document <span className="required">*</span></strong>
-                      <small>PDF only · maximum 5 MB per file · up to {limit} file{limit === 1 ? "" : "s"}</small>
+                      <strong>{t("Supporting document")} <span className="required">*</span></strong>
+                      <small>{t(limit === 1 ? "PDF only · maximum 5 MB per file · up to 1 file" : "PDF only · maximum 5 MB per file · up to {limit} files", { limit })}</small>
                     </div>
-                    <span className="doc-state">{files.length ? `✓ Uploaded ${files.length}/${limit}` : "Not uploaded"}</span>
+                    <span className="doc-state">{files.length ? t("✓ Uploaded {n}/{max}", { n: files.length, max: limit }) : t("Not uploaded")}</span>
                   </div>
                   <label className={`doc-drop ${files.length >= limit || locked ? "full" : ""}`}>
-                    <input type="file" accept=".pdf,application/pdf" multiple={limit > 1} aria-label="Supporting document" onChange={(e) => addFiles(key, e)} disabled={locked || files.length >= limit} />
+                    <input type="file" accept=".pdf,application/pdf" multiple={limit > 1} aria-label={t("Supporting document")} onChange={(e) => addFiles(key, e)} disabled={locked || files.length >= limit} />
                     <span className="doc-drop-icon">↑</span>
-                    <span><b>{files.length >= limit ? `Maximum ${limit} file${limit === 1 ? "" : "s"} uploaded` : <>Drag a file here or <u>choose a file</u></>}</b></span>
+                    <span><b>{files.length >= limit ? t(limit === 1 ? "Maximum 1 file uploaded" : "Maximum {max} files uploaded", { max: limit }) : <>{t("Drag a file here or")} <u>{t("choose a file")}</u></>}</b></span>
                   </label>
                   {files.length > 0 && (
                     <div className="file-list">
@@ -191,9 +201,9 @@ export default function SupplierQuestionnaire({ done }: { done: number }) {
                         <div className="file-row" key={file.uid || `${file.name}-${fileIndex}`}>
                           <span className="file-ico">PDF</span>
                           <span className="file-name">{file.name}<small>{((file.size || 0) / 1024).toFixed(0)} KB</small></span>
-                          <button type="button" aria-label={`Remove ${file.name}`} onClick={() => removeFile(key, fileIndex)} disabled={locked}>Remove</button>
+                          <button type="button" aria-label={t("Remove {name}", { name: file.name })} onClick={() => removeFile(key, fileIndex)} disabled={locked}>{t("Remove")}</button>
                           <label className="file-expiry">
-                            Expiry date
+                            {t("Expiry date")}
                             <input type="date" min={todayIso()} value={file.expiry || ""} disabled={locked} onChange={(e) => setExpiry(key, fileIndex, e.target.value)} />
                           </label>
                         </div>
@@ -203,15 +213,14 @@ export default function SupplierQuestionnaire({ done }: { done: number }) {
                 </div>
               </div>
             )}
-            {response.answer && (
-              <Input name={`qn-${key}-note`} label="Note" type="textarea" value={note} hint={`Optional · ${note.length}/5000 characters`} disabled={locked} onChange={(value) => setNote(key, value)} />
-            )}
+            <Input name={`qn-${key}-note`} label="Note" type="textarea" value={note} hint={t("Optional · {n}/5000 characters", { n: note.length })} placeholder="Describe additional details about the product or service" disabled={locked} onChange={(value) => setNote(key, value)} />
           </Section>
+          </Fragment>
         );
       })}
 
-      <Footer note={`${answered} of ${userQuestions.length} supplier responses completed · Conditional documents: ${complete ? "complete" : "incomplete"}`}>
-        <button className="button primary" onClick={submit} disabled={!complete || locked}>Submit questionnaire</button>
+      <Footer note={t("{n} of {total} supplier responses completed · Conditional documents: {state}", { n: answered, total: userQuestions.length, state: complete ? t("complete") : t("incomplete") })}>
+        <button className="button primary" onClick={submit} disabled={!complete || locked}>{t("Submit questionnaire")}</button>
       </Footer>
     </div>
   );

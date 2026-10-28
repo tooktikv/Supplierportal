@@ -1,4 +1,5 @@
 import { supplierQuestionnaire } from "./data";
+import { inherentRisk } from "./risk";
 import type { Db } from "./types";
 
 export const registrationDone = (db: Db) => db.registration.status === "Submitted";
@@ -14,7 +15,7 @@ export interface OnboardingTask {
   description: string;
   icon: string;
   group: string;
-  /** Only needed when an earlier answer flags a risk. */
+  /** Only needed when the system rates an area as High risk. */
   conditional?: boolean;
 }
 
@@ -29,6 +30,16 @@ export const onboardingTasks: OnboardingTask[] = [
     group: SOURCING_GROUP,
   },
   {
+    id: "sustainability-risk",
+    title: "Sustainability Risk Assessment",
+    category: "Assessment",
+    required: 1,
+    description: "Complete the topic assessment for each area where your Inherent Risk is rated High.",
+    icon: "◈",
+    group: SOURCING_GROUP,
+    conditional: true,
+  },
+  {
     id: "supplier-questionnaire",
     title: "New Supplier Selection Questionnaire",
     category: "Questionnaire",
@@ -36,16 +47,6 @@ export const onboardingTasks: OnboardingTask[] = [
     description: "Complete the supplier pre-screening questionnaire for your company.",
     icon: "☷",
     group: SOURCING_GROUP,
-  },
-  {
-    id: "sustainability-risk",
-    title: "Sustainability Risk Assessment",
-    category: "Assessment",
-    required: 1,
-    description: "Complete the topic assessment when the demo screening flags a risk.",
-    icon: "◈",
-    group: SOURCING_GROUP,
-    conditional: true,
   },
   {
     id: "thai-labor-standard",
@@ -88,21 +89,26 @@ export const riskTopics: [string, string][] = [
 export const taskCount = (db: Db, id: string) =>
   Math.min(onboardingTasks.find((t) => t.id === id)?.required || 0, Number(db.onboarding.tasks[id]) || 0);
 
-export const questionnaireAvailable = (db: Db) => taskCount(db, "sourcing-policy") === 3;
+export const questionnaireAvailable = (db: Db) => taskCount(db, "sourcing-policy") === 3 && riskAssessmentDone(db);
+
+/** Areas where the system rates your Inherent Risk as High (mock rules based on your product category). */
+export const highRiskTopics = (db: Db) => {
+  const levels = inherentRisk(db.profile.onboardingCategory);
+  return riskTopics.map(([key]) => key).filter((key) => levels[key] === "High");
+};
 
 export function riskAssessmentState(db: Db): "pending" | "required" | "not-required" {
-  if (!questionnaireAvailable(db) || !taskCount(db, "supplier-questionnaire")) return "pending";
-  return supplierQuestionnaire.some(
-    ([key, , type]) => type !== "system" && db.onboarding.questionnaireAnswers[key]?.answer === "No",
-  )
-    ? "required"
-    : "not-required";
+  if (!registrationDone(db)) return "pending";
+  return highRiskTopics(db).length ? "required" : "not-required";
 }
+
+/** True once the topic assessment is submitted, or when no area is rated High. */
+export const riskAssessmentDone = (db: Db) => riskAssessmentState(db) === "not-required" || taskCount(db, "sustainability-risk") >= 1;
 
 export function riskAssessmentMessage(db: Db) {
   return riskAssessmentState(db) === "pending"
-    ? "Complete Step 2 · New Supplier Selection Questionnaire first. In this demo, any No response triggers a follow-up assessment."
-    : "No No responses were identified in the demo questionnaire. Additional assessment is not required.";
+    ? "Complete supplier registration first."
+    : "Your Inherent Risk is not rated High in any area, so no topic assessment is required.";
 }
 
 export function taskBlockedMessage(db: Db, id: string) {
@@ -111,9 +117,14 @@ export function taskBlockedMessage(db: Db, id: string) {
     return "Complete Step 1 · TLS e-Learning (all 5 items) first.";
   if (id === "thai-labor-assessment" && (taskCount(db, "thai-labor-standard") < 5 || taskCount(db, "thai-labor-commitment") < 1))
     return "Complete Step 1 · TLS e-Learning and Step 2 · commitment letter (F-TLS-02) first.";
-  if (id === "supplier-questionnaire" && !questionnaireAvailable(db))
-    return "Complete Step 1 · Sustainable Sourcing Policy (all 3 activities) first.";
-  if (id === "sustainability-risk" && riskAssessmentState(db) !== "required") return riskAssessmentMessage(db);
+  if (id === "sustainability-risk") {
+    if (riskAssessmentState(db) !== "required") return riskAssessmentMessage(db);
+    if (taskCount(db, "sourcing-policy") < 3) return "Complete Step 1 · Sustainable Sourcing Policy (all 3 activities) first.";
+  }
+  if (id === "supplier-questionnaire") {
+    if (taskCount(db, "sourcing-policy") < 3) return "Complete Step 1 · Sustainable Sourcing Policy (all 3 activities) first.";
+    if (!riskAssessmentDone(db)) return "Complete Step 2 · Sustainability Risk Assessment first.";
+  }
   return "";
 }
 
@@ -169,8 +180,7 @@ export function onboardingStages(db: Db) {
 
 export function questionnaireSystemAnswer(db: Db, key: string) {
   if (key === "policy-accepted") return taskCount(db, "sourcing-policy") === 3 ? "Yes" : "No";
-  if (key === "self-assessment")
-    return riskAssessmentState(db) === "not-required" || taskCount(db, "sustainability-risk") >= 1 ? "Yes" : "No";
+  if (key === "self-assessment") return riskAssessmentDone(db) ? "Yes" : "No";
   return "";
 }
 

@@ -46,11 +46,12 @@ export default function ProjectTab() {
     toast("Project deleted.");
   };
 
-  const submit = () => {
+  const submit = async () => {
     if (!project) return;
     const next = projectErrors(project);
     setErrors(next);
     if (Object.keys(next).length) return toast("Complete the highlighted fields before submitting.");
+    if (!(await confirm({ message: "Submit this project?", confirmLabel: "Submit" }))) return;
     mutate((d) => {
       const current = d.srm.projects.find((item) => item.id === project.id);
       if (current) Object.assign(current, { status: "Submitted", updated: todayIso() });

@@ -5,6 +5,7 @@ import SiteModal from "@/components/SiteModal";
 import { BuyerInterestBadge } from "@/components/BuyerInterest";
 import { Badge, PageHeading } from "@/components/ui";
 import { usePortal } from "@/lib/store";
+import { useI18n } from "@/lib/i18n";
 import CompanyInfoTab from "./CompanyInfoTab";
 import ContactsTab from "./ContactsTab";
 import DocumentModal, { type DocModalInit } from "./DocumentModal";
@@ -17,6 +18,7 @@ const TABS = ["Company information", "Contacts", "Manufacturing sites", "Importa
 
 export default function ProfilePage() {
   const { db } = usePortal();
+  const { t } = useI18n();
   const p = db.profile;
   const [tab, setTab] = useState(TABS[0]);
   const [editing, setEditing] = useState(false);
@@ -41,16 +43,16 @@ export default function ProfilePage() {
         <div>
           <h2>{p.company}</h2>
           <p>
-            Supplier ID {p.id} · {p.site}
+            {t("Supplier ID {id}", { id: p.id })} · {p.site}
           </p>
         </div>
         <BuyerInterestBadge />
         <Badge status="Verified" />
       </div>
       <div className="profile-tabs" role="tablist">
-        {TABS.map((t) => (
-          <button key={t} className={`profile-tab ${tab === t ? "selected" : ""}`} role="tab" aria-selected={tab === t} onClick={() => showTab(t)}>
-            {t}
+        {TABS.map((name) => (
+          <button key={name} className={`profile-tab ${tab === name ? "selected" : ""}`} role="tab" aria-selected={tab === name} onClick={() => showTab(name)}>
+            {t(name)}
           </button>
         ))}
       </div>
@@ -82,7 +84,7 @@ export default function ProfilePage() {
         {tab === "Products" && <ProductsTab />}
         {tab === "Risk assessment" && <RiskTab />}
         <div className="notice" style={{ margin: "18px 0 0" }}>
-          Profile changes and new records are saved in this browser for demonstration only; they are not submitted for approval.
+          {t("Profile changes and new records are saved in this browser for demonstration only; they are not submitted for approval.")}
         </div>
       </div>
       <SiteModal open={siteOpen} onClose={() => setSiteOpen(false)} />

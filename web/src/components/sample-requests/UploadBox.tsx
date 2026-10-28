@@ -1,15 +1,17 @@
 "use client";
 
 import { todayIso } from "@/lib/docs";
+import { useI18n } from "@/lib/i18n";
 import { usePortal } from "@/lib/store";
 import type { FileMeta } from "@/lib/types";
 import { kb, pickFiles } from "./sample-utils";
 
 function ExpiryInput({ value, onChange }: { value?: string; onChange: (value: string) => void }) {
   const { toast } = usePortal();
+  const { t } = useI18n();
   return (
     <label className="file-expiry">
-      Expiry date
+      {t("Expiry date")}
       <input
         type="date"
         min={todayIso()}
@@ -35,9 +37,10 @@ interface UploadBoxProps {
 
 export default function UploadBox({ files, helper, onAdd, onExpiry, onRemove, labelRemove }: UploadBoxProps) {
   const { toast } = usePortal();
+  const { t } = useI18n();
   return (
     <div className="upload-box">
-      <div className="helper">{helper}</div>
+      <div className="helper">{t(helper)}</div>
       <input
         type="file"
         multiple
@@ -54,8 +57,8 @@ export default function UploadBox({ files, helper, onAdd, onExpiry, onRemove, la
               ▤ &nbsp;{f.name} <small>({kb(f.size)} KB)</small>
             </span>
             <ExpiryInput value={f.expiry} onChange={(v) => onExpiry(i, v)} />
-            <button type="button" aria-label={labelRemove ? `Remove ${f.name}` : undefined} onClick={() => onRemove(i)}>
-              Remove
+            <button type="button" aria-label={labelRemove ? t("Remove {name}", { name: f.name }) : undefined} onClick={() => onRemove(i)}>
+              {t("Remove")}
             </button>
           </div>
         ))}
