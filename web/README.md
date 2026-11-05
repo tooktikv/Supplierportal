@@ -1,6 +1,6 @@
 # Supplier Portal (Next.js)
 
-React / Next.js port of the HTML mock-up that lives one folder up (`../index.html`, `../app.js`, `../styles.css`). The mock-up files are unchanged and still open straight from disk; this app is the production-style version of the same prototype.
+React / Next.js supplier portal prototype (ported from the original HTML mock-up, which has since been removed).
 
 ```bash
 npm install
@@ -9,11 +9,11 @@ npm run build && npm run start
 ```
 
 ## What carried over
-- `src/app/globals.css` is a copy of the mock-up's `styles.css`, so markup and class names match the mock-up.
+- `src/app/globals.css` keeps the mock-up's markup and class names.
 - Same fictional seed data, rules and copy. Data is saved in the browser (`localStorage`, key `northstar-supplier-portal-v1`); use **Reset fictional demo data** in the sidebar to restore the seed. There is still no backend.
 
 ## Structure
-- `src/app/(portal)/…` routes: `/onboarding`, `/onboarding/registration`, `/onboarding/tasks/[taskId]`, `/sample-requests` (+ `/new`, `/[id]`, `/[id]/respond`), `/profile`, `/notifications`, `/help`.
+- `src/app/(portal)/…` routes: `/onboarding`, `/onboarding/registration`, `/onboarding/tasks/[taskId]`, `/sample-requests` (+ `/[id]`, `/[id]/submit`), `/profile`, `/srm`, `/help`.
 - `src/lib/` data and rules: `data.ts` (seed), `policy.ts` (sample-gate rules), `onboarding.ts`, `registration.ts` (field specs and validation), `docs.ts` (document versions, expiry, previews), `db.ts` (load/save), `store.tsx` (`usePortal()`: `db`, `mutate(fn)`, `toast`).
 - `src/components/` page components grouped by area (`registration/`, `onboarding/`, `sample-requests/`, `profile/`).
 

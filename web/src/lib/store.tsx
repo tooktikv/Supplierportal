@@ -1,18 +1,11 @@
 "use client";
 
-import { createContext, useCallback, useContext, useRef, useState, useSyncExternalStore, type Dispatch, type ReactNode, type SetStateAction } from "react";
+import { createContext, useCallback, useContext, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { createInitialDb } from "./data";
 import { useConfirm } from "@/components/ConfirmDialog";
 import { clearDb, loadDb, saveDb } from "./db";
 import { clearFilePreviews } from "./docs";
 import type { Db } from "./types";
-
-export interface WizardState {
-  /** Sample-request draft being edited; null when no wizard is open. */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic form record, same as the mock-up
-  form: Record<string, any> | null;
-  step: number;
-}
 
 interface ToastItem {
   id: number;
@@ -27,8 +20,6 @@ interface PortalContextValue {
   toasts: ToastItem[];
   /** Confirms, wipes saved data and restores the seeded scenario. Returns true when reset. */
   resetDemo: () => Promise<boolean>;
-  wizard: WizardState;
-  setWizard: Dispatch<SetStateAction<WizardState>>;
 }
 
 // The db lives in a tiny external store backed by localStorage. The server snapshot is null, so
@@ -53,7 +44,6 @@ const PortalContext = createContext<PortalContextValue | null>(null);
 export function PortalProvider({ children }: { children: ReactNode }) {
   const db = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
   const [toasts, setToasts] = useState<ToastItem[]>([]);
-  const [wizard, setWizard] = useState<WizardState>({ form: null, step: 0 });
   const toastId = useRef(0);
   const confirm = useConfirm();
 
@@ -81,7 +71,6 @@ export function PortalProvider({ children }: { children: ReactNode }) {
       return false;
     }
     setCurrent(createInitialDb());
-    setWizard({ form: null, step: 0 });
     clearFilePreviews();
     toast("Demo data reset.");
     return true;
@@ -89,7 +78,7 @@ export function PortalProvider({ children }: { children: ReactNode }) {
 
   if (!db) return null;
   return (
-    <PortalContext.Provider value={{ db, mutate, toast, toasts, resetDemo, wizard, setWizard }}>
+    <PortalContext.Provider value={{ db, mutate, toast, toasts, resetDemo }}>
       {children}
     </PortalContext.Provider>
   );

@@ -28,19 +28,6 @@ export function PageHeading({ title, desc, action }: { title: ReactNode; desc: R
   );
 }
 
-export function Metric({ label, value, icon, note = "" }: { label: string; value: ReactNode; icon: string; note?: string }) {
-  return (
-    <div className="card metric">
-      <div className="metric-top">
-        {label}
-        <span className="metric-icon">{icon}</span>
-      </div>
-      <strong>{value}</strong>
-      <small>{note}</small>
-    </div>
-  );
-}
-
 export function InfoItem({ label, value }: { label: string; value?: ReactNode }) {
   const { t } = useI18n();
   return (

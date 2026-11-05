@@ -1,4 +1,4 @@
-// Seed data copied from the mock-up (app.js). Fictional records only.
+// Seed data carried over from the original HTML mock-up. Fictional records only.
 import type { Db, Lesson, Question, QuestionnaireItem, RequestRec } from "./types";
 import { CATEGORIES, policyFields } from "./policy";
 import { buyerRequestOf } from "./sample-request-flow";

@@ -35,14 +35,11 @@ function pageName(path: string) {
   if (path === routes.registration) return "Supplier Registration";
   if (path.startsWith("/onboarding/tasks")) return "Onboarding Task";
   if (path.startsWith("/onboarding")) return "Supplier Onboarding";
-  if (path === routes.newSample) return "Create Sample Request";
   if (path.startsWith("/sample-requests/") && path.endsWith("/submit")) return "Provide Sample Information";
-  if (path.startsWith("/sample-requests/") && path.endsWith("/respond")) return "Provide Sample Information";
   if (path.startsWith("/sample-requests/")) return "Sample Request Details";
   if (path.startsWith("/sample-requests")) return "Sample Request";
   if (path.startsWith("/profile")) return "Company Profile";
   if (path.startsWith("/srm")) return "Supplier Relationship Management";
-  if (path.startsWith("/notifications")) return "Notifications";
   if (path.startsWith("/help")) return "Help & Support";
   return "Supplier Onboarding";
 }

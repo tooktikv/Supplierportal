@@ -3,18 +3,13 @@
 import { useRouter } from "next/navigation";
 import { routes } from "@/lib/routes";
 import { usePortal } from "@/lib/store";
-import { newSampleForm, RESPONSE_STATUSES } from "./sample-utils";
+import { RESPONSE_STATUSES } from "./sample-utils";
 import { canSubmitSample } from "@/lib/sample-request-flow";
 
-/** startNew / editDraft / respond / requestAction from the mock-up, wired to routes. */
+/** editDraft / respond / requestAction from the mock-up, wired to routes. */
 export function useSampleActions() {
-  const { db, toast, setWizard } = usePortal();
+  const { db, toast } = usePortal();
   const router = useRouter();
-
-  const startNew = () => {
-    setWizard({ form: newSampleForm(db.profile.company), step: 0 });
-    router.push(routes.newSample);
-  };
 
   const editDraft = (id: string) => {
     const r = db.requests.find((x) => x.id === id);
@@ -36,5 +31,5 @@ export function useSampleActions() {
     router.push(routes.sample(id));
   };
 
-  return { startNew, editDraft, respondTo, requestAction };
+  return { editDraft, respondTo, requestAction };
 }

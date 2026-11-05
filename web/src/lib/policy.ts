@@ -11,9 +11,6 @@ export const needsSample = (category: string) => CATEGORIES[category]?.sampleReq
 export const requiresApproval = (category: string) =>
   CATEGORIES[category]?.sampleRequired === true && CATEGORIES[category]?.approvalRequired === true;
 
-export const isPhysical = (type: string) => type === "Physical" || type === "Both";
-export const isDigital = (type: string) => type === "Digital" || type === "Both";
-
 export function gateOf(r: RequestRec): string {
   if (!r.category) return "Pending";
   if (r.sampleRequired === false || !requiresApproval(r.category)) return "Exempt";

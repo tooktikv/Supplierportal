@@ -2,14 +2,20 @@
 
 ## Run locally
 
-Open `index.html` in a modern browser. The prototype uses plain HTML, CSS, and JavaScript and has no package install, build step, server, or external API dependency.
+The app lives in [web/](web) (Next.js). It has no backend; all data is fictional and saved in the browser.
+
+```bash
+cd web
+npm install
+npm run dev      # http://localhost:3000
+```
 
 ## Supplier-facing features
 
 - Supplier onboarding landing page with progress stages and task actions
 - A five-stage onboarding tracker with persistent learning, risk assessment, and supplier questionnaire tasks
 - Sample request list with combined search, status, category, sample-type, and date filters
-- Four-step create/edit-draft flow for physical, digital, and combined submissions
+- Buyer-driven sample requests: the Buyer opens a request and the supplier provides sample information (draft, submit, resubmit)
 - Request detail pages, status history, evaluator feedback, and response/resubmission history
 - Company profile tabs for company/owner information, contacts, manufacturing sites, documents, products, and risk assessment; document status filters
 - Documents live only in Company Profile > Important documents (the separate Documents menu was removed). The tab has status filters (All, Under Review, Approved, Expiring Soon, Expired, Required) and an Add document button; View opens one modal that holds the preview, the details and the version history (pick a version to preview it, Upload new version adds one). Columns: Upload source (Supplier registration, Pre-screening, Sample request, Manual upload), Latest upload and Expiry. Every upload screen (registration documents, questionnaire PDFs, sample request attachments/responses, Add document) has an optional per-file expiry date; documents within 30 days of expiry show Expiring Soon and past dates show Expired. Questionnaire and sample-request files are added to the list on submit.
@@ -24,7 +30,7 @@ Open `index.html` in a modern browser. The prototype uses plain HTML, CSS, and J
 - Supplier Registration is the first item under Your tasks on the Supplier Onboarding page (the landing page) while the supplier is unregistered, and opens as a sub page rather than a menu item. Until it is submitted, the other tasks and the Sample Request, Company Profile and Notifications menus stay visible but disabled. The form has a step/section navigator with live required-field progress. Flow: accept CoC / T&D, then four steps (general information with contact, owner, address and coordinates; important documents; product categories with repeatable category groups; review and submit). Validation follows the supplied field rules (required, length, Thai/English-only, phone 9-15 digits, DD-MM-YYYY, latitude/longitude ranges, PDF or PNG/JPG up to 5 MB and 5 files). Conditional fields: branch name only for "สาขา", other position/department only for "อื่นๆ", ภ.พ.20 only when VAT-registered, and the document list switches between juridical and natural person. Submitting populates the Company Profile and Documents and unlocks the rest of the portal.
 - Province/district/sub-district, country, position, department and product category lists are small sample data; replace them with the real master data. Map search is an embedded Google Maps view driven by the search text or coordinates (no Maps API key); file uploads store metadata only. The CoC / T&D text is placeholder content. The "same as system user" option fills only English name, phone and email from the fictional account.
 
-- All supplier, product, document, and evaluation records are fictional and live in `app.js`.
+- All supplier, product, document, and evaluation records are fictional and live in `web/src/lib/data.ts`.
 - `CATEGORIES` is the configurable mock source for `sampleRequired` and `approvalRequired`. The selected onboarding category is currently `Industrial Components`.
 - e-Learning and self-registration step statuses are fictional values in the `onboarding` mock record.
 - The learning task follows three sequential activities: an in-page YouTube preview placeholder (1/3), a scrollable policy preview and required consent (2/3), and a 10-question/four-option quiz (3/3). The quiz requires at least 8/10 (80%) and allows retries after a failed attempt. No video URL or official policy PDF was provided, so the preview and policy content remain clearly marked prototype content; completion is simulated and stored locally. Previous module-based quiz completions and old quiz results are not treated as completion of the updated flow.

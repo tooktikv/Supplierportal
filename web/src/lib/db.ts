@@ -7,7 +7,7 @@ import { migrateSrmRecords, normalizeScope3 } from "./srm";
 
 export const DB_KEY = "northstar-supplier-portal-v1";
 
-/** Same migrations as the mock-up so a db saved by index.html keeps working. */
+/** Same migrations as the original mock-up so older saved data keeps working. */
 export function loadDb(): Db {
   try {
     const saved = localStorage.getItem(DB_KEY);
