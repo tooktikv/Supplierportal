@@ -17,6 +17,7 @@ import {
   regStepErrors,
   type RegData,
 } from "@/lib/registration";
+import { useI18n } from "@/lib/i18n";
 import { routes } from "@/lib/routes";
 import { usePortal } from "@/lib/store";
 import { useConfirm } from "@/components/ConfirmDialog";
@@ -31,6 +32,7 @@ import { useRegUi } from "./useRegUi";
 
 export default function RegistrationWizard() {
   const { db, mutate, toast } = usePortal();
+  const { t: tx } = useI18n();
   const router = useRouter();
   const confirm = useConfirm();
   const ui = useRegUi();
@@ -162,7 +164,7 @@ export default function RegistrationWizard() {
         {r.categories.map((_, i) => (
           <RegSection
             key={i}
-            title={`กลุ่มสินค้าที่ ${i + 1}`}
+            title={tx("กลุ่มสินค้าที่ {n}", { n: i + 1 })}
             fields={regCatFields()}
             form={formFor(`cat:${i}`)}
             num={i + 1}
@@ -170,7 +172,7 @@ export default function RegistrationWizard() {
             extra={
               r.categories.length > 1 ? (
                 <button type="button" className="button danger" onClick={() => removeCategory(i)}>
-                  ลบกลุ่มสินค้า
+                  {tx("ลบกลุ่มสินค้า")}
                 </button>
               ) : null
             }
@@ -178,7 +180,7 @@ export default function RegistrationWizard() {
         ))}
         <div>
           <button type="button" className="button" onClick={addCategory}>
-            ＋ เพิ่มกลุ่มสินค้า
+            {tx("＋ เพิ่มกลุ่มสินค้า")}
           </button>
         </div>
       </>
@@ -186,7 +188,7 @@ export default function RegistrationWizard() {
   } else {
     body = (
       <>
-        <div className="notice">ตรวจสอบข้อมูลทั้งหมดก่อนส่ง เมื่อส่งข้อมูลแล้ว ระบบจะสร้างโปรไฟล์ผู้ขายจากข้อมูลนี้</div>
+        <div className="notice">{tx("ตรวจสอบข้อมูลทั้งหมดก่อนส่ง เมื่อส่งข้อมูลแล้ว ระบบจะสร้างโปรไฟล์ผู้ขายจากข้อมูลนี้")}</div>
         <RegReview registration={r} onGo={go} />
       </>
     );
@@ -201,19 +203,19 @@ export default function RegistrationWizard() {
         <div className="card reg-footer">
           {r.step > 1 ? (
             <button className="button" onClick={() => step(-1)}>
-              ‹ ย้อนกลับ
+              ‹ {tx("ย้อนกลับ")}
             </button>
           ) : (
             <span />
           )}
-          <span className="reg-footer-note">ขั้นที่ {r.step} จาก 4</span>
+          <span className="reg-footer-note">{tx("ขั้นที่ {step} จาก 4", { step: r.step })}</span>
           {r.step < 4 ? (
             <button className="button primary" onClick={() => step(1)}>
-              ต่อไป ›
+              {tx("ต่อไป")} ›
             </button>
           ) : (
             <button className="button primary" onClick={submit}>
-              ส่งข้อมูล
+              {tx("ส่งข้อมูล")}
             </button>
           )}
         </div>

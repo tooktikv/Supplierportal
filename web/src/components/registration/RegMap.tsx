@@ -1,5 +1,6 @@
 "use client";
 
+import { useI18n } from "@/lib/i18n";
 import { chkCoord } from "@/lib/registration";
 import type { RegData } from "@/lib/registration";
 
@@ -15,6 +16,7 @@ export const pickMap = (d: RegData | undefined): MapSnap => ({ lat: d?.lat, lng:
 
 /** Renders from a snapshot so the iframe only reloads when the caller refreshes it (on blur), not on every keystroke. */
 export default function RegMap({ snap, id }: { snap: MapSnap; id?: string }) {
+  const { t } = useI18n();
   const lat = String(snap.lat ?? "").trim();
   const lng = String(snap.lng ?? "").trim();
   const valid = lat !== "" && lng !== "" && !chkCoord(-90, 90, "")(lat) && !chkCoord(-180, 180, "")(lng);
@@ -22,18 +24,18 @@ export default function RegMap({ snap, id }: { snap: MapSnap; id?: string }) {
   return (
     <div className="reg-map" id={id}>
       {!q ? (
-        <div className="reg-map-empty">ค้นหาสถานที่ หรือระบุละติจูด/ลองจิจูด เพื่อแสดงแผนที่</div>
+        <div className="reg-map-empty">{t("ค้นหาสถานที่ หรือระบุละติจูด/ลองจิจูด เพื่อแสดงแผนที่")}</div>
       ) : (
         <>
           <iframe
             className="reg-map-frame"
-            title="แผนที่ตำแหน่งที่ตั้ง"
+            title={t("แผนที่ตำแหน่งที่ตั้ง")}
             src={`https://maps.google.com/maps?q=${encodeURIComponent(q)}&z=15&output=embed`}
             loading="lazy"
             referrerPolicy="no-referrer"
           />
           <a className="text-link" href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`} target="_blank" rel="noopener noreferrer">
-            เปิดใน Google Maps →
+            {t("เปิดใน Google Maps →")}
           </a>
         </>
       )}

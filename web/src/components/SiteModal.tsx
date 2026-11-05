@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { regFieldError, regId, regSetValue, siteRecord, SITE_FIELDS, type RegData } from "@/lib/registration";
+import { useI18n } from "@/lib/i18n";
 import { usePortal } from "@/lib/store";
 import RegField, { focusFirstRegError, type RegFormApi } from "@/components/registration/RegField";
 import RegMap, { MAP_KEYS, pickMap, type MapSnap } from "@/components/registration/RegMap";
@@ -16,6 +17,7 @@ const field = (k: string) => SITE_FIELDS.find((f) => f.k === k)!;
 
 function SiteDialog({ onClose }: { onClose: () => void }) {
   const { mutate, toast } = usePortal();
+  const { t } = useI18n();
   const ui = useRegUi();
   const [draft, setDraft] = useState<RegData>({ country: "ไทย" });
   const [mapSnap, setMapSnap] = useState<MapSnap>(() => pickMap({ country: "ไทย" }));
@@ -77,24 +79,24 @@ function SiteDialog({ onClose }: { onClose: () => void }) {
   return (
     <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="site-modal-title" ref={dialogRef}>
-        <button type="button" className="modal-close" aria-label="ปิด" onClick={onClose}>
+        <button type="button" className="modal-close" aria-label={t("ปิด")} onClick={onClose}>
           ×
         </button>
         <div className="modal-body">
           <DemoFill onFill={() => { setDraft({ ...DEMO_SITE }); setMapSnap(pickMap(DEMO_SITE)); }} />
-          <h2 id="site-modal-title">ที่อยู่โรงงานผู้ผลิตสินค้า</h2>
+          <h2 id="site-modal-title">{t("ที่อยู่โรงงานผู้ผลิตสินค้า")}</h2>
           <div className="reg-grid">{["name", "country", "address", "province", "district", "subdistrict", "postal"].map(render)}</div>
-          <h3 className="modal-subtitle">พิกัดที่ตั้งโรงงานผู้ผลิตสินค้า</h3>
-          <p className="modal-hint">กรุณาระบุตำแหน่งที่ตั้งโรงงานผู้ผลิตสินค้าของคุณ</p>
+          <h3 className="modal-subtitle">{t("พิกัดที่ตั้งโรงงานผู้ผลิตสินค้า")}</h3>
+          <p className="modal-hint">{t("กรุณาระบุตำแหน่งที่ตั้งโรงงานผู้ผลิตสินค้าของคุณ")}</p>
           <div className="reg-grid">{["lat", "lng", "mapQuery"].map(render)}</div>
           <RegMap id="site-map" snap={mapSnap} />
         </div>
         <div className="modal-footer">
           <button type="button" className="button" onClick={onClose}>
-            ย้อนกลับ
+            {t("ย้อนกลับ")}
           </button>
           <button type="button" className="button primary" onClick={save}>
-            บันทึก
+            {t("บันทึก")}
           </button>
         </div>
       </div>

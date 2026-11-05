@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { useI18n } from "@/lib/i18n";
 import type { RegData, RegFieldSpec } from "@/lib/registration";
 import RegField, { type RegFormApi } from "./RegField";
 
@@ -16,14 +17,15 @@ interface RegSectionProps {
 }
 
 export default function RegSection({ title, fields, form, num, id, hint, extra, after }: RegSectionProps) {
+  const { t } = useI18n();
   const d: RegData = form.data;
   return (
     <section className="card reg-section" id={id}>
       <header className="reg-section-head">
         {num ? <span className="reg-sec-num">{num}</span> : null}
         <div className="reg-section-title">
-          <h2>{title}</h2>
-          {hint ? <p>{hint}</p> : null}
+          <h2>{t(title)}</h2>
+          {hint ? <p>{t(hint)}</p> : null}
         </div>
         {extra}
       </header>

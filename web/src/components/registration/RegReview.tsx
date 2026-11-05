@@ -1,6 +1,7 @@
 "use client";
 
 import { InfoItem } from "@/components/ui";
+import { useI18n } from "@/lib/i18n";
 import { REG_STEP1, regCatFields, regDocFields, type RegData, type RegFieldSpec } from "@/lib/registration";
 import type { Db } from "@/lib/types";
 
@@ -13,14 +14,15 @@ function reviewValue(f: RegFieldSpec, data: RegData): string | null {
 }
 
 function Block({ title, fields, data, step, onGo }: { title: string; fields: RegFieldSpec[]; data: RegData; step: number; onGo: (step: number) => void }) {
+  const { t } = useI18n();
   return (
     <section className="card reg-section">
       <header className="reg-section-head">
         <div className="reg-section-title">
-          <h2>{title}</h2>
+          <h2>{t(title)}</h2>
         </div>
         <button className="button" onClick={() => onGo(step)}>
-          แก้ไข
+          {t("แก้ไข")}
         </button>
       </header>
       <div className="info-grid">
@@ -34,6 +36,7 @@ function Block({ title, fields, data, step, onGo }: { title: string; fields: Reg
 }
 
 export default function RegReview({ registration, onGo }: { registration: Db["registration"]; onGo: (step: number) => void }) {
+  const { t } = useI18n();
   const d = registration.data;
   return (
     <>
@@ -42,7 +45,7 @@ export default function RegReview({ registration, onGo }: { registration: Db["re
       ))}
       <Block title="เอกสารสำคัญ" fields={regDocFields(d)} data={d} step={2} onGo={onGo} />
       {registration.categories.map((c, i) => (
-        <Block key={i} title={`กลุ่มสินค้าที่ ${i + 1}`} fields={regCatFields()} data={c} step={3} onGo={onGo} />
+        <Block key={i} title={t("กลุ่มสินค้าที่ {n}", { n: i + 1 })} fields={regCatFields()} data={c} step={3} onGo={onGo} />
       ))}
     </>
   );

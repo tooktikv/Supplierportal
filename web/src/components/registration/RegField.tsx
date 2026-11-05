@@ -2,6 +2,7 @@
 
 import { useRef, useState, type ChangeEvent } from "react";
 import { todayIso } from "@/lib/docs";
+import { useI18n } from "@/lib/i18n";
 import { isRegRequired, regFieldError, regId, regOptions, type RegData, type RegFieldSpec } from "@/lib/registration";
 import type { FileMeta } from "@/lib/types";
 
@@ -27,6 +28,7 @@ export function focusFirstRegError(root: ParentNode = document) {
 }
 
 function FileControl({ field, form, id, star }: { field: RegFieldSpec; form: RegFormApi; id: string; star: boolean }) {
+  const { t } = useI18n();
   const [over, setOver] = useState(false);
   const val = form.data[field.k];
   const files: FileMeta[] = Array.isArray(val) ? val : [];
@@ -45,19 +47,19 @@ function FileControl({ field, form, id, star }: { field: RegFieldSpec; form: Reg
         <span className="doc-icon">{img ? "▣" : "▤"}</span>
         <div>
           <strong>
-            {field.label}
+            {t(field.label)}
             {star && <span className="required"> *</span>}
           </strong>
-          <small>{img ? "PNG หรือ JPG" : "PDF"} · สูงสุด 5 MB ต่อไฟล์ · สูงสุด 5 ไฟล์</small>
-          {field.note && <small className="doc-note">{field.note}</small>}
+          <small>{img ? t("PNG หรือ JPG") : "PDF"} · {t("สูงสุด 5 MB ต่อไฟล์ · สูงสุด 5 ไฟล์")}</small>
+          {field.note && <small className="doc-note">{t(field.note)}</small>}
         </div>
-        <span className="doc-state">{files.length ? `✓ อัปโหลดแล้ว ${files.length}/5` : star ? "ยังไม่ได้อัปโหลด" : "ไม่บังคับ"}</span>
+        <span className="doc-state">{files.length ? t("✓ อัปโหลดแล้ว {n}/5", { n: files.length }) : star ? t("ยังไม่ได้อัปโหลด") : t("ไม่บังคับ")}</span>
       </div>
       <label className={`doc-drop ${full ? "full" : ""} ${over ? "over" : ""}`} onDragEnter={() => setOver(true)} onDragLeave={() => setOver(false)} onDrop={() => setOver(false)}>
-        <input type="file" id={id} multiple accept={img ? ".png,.jpg,.jpeg" : ".pdf"} aria-label={field.label} onChange={onPick} disabled={full} />
+        <input type="file" id={id} multiple accept={img ? ".png,.jpg,.jpeg" : ".pdf"} aria-label={t(field.label)} onChange={onPick} disabled={full} />
         <span className="doc-drop-icon">↑</span>
         <span>
-          <b>{full ? "อัปโหลดครบ 5 ไฟล์แล้ว" : <>ลากไฟล์มาวาง หรือ <u>เลือกไฟล์</u></>}</b>
+          <b>{full ? t("อัปโหลดครบ 5 ไฟล์แล้ว") : <>{t("ลากไฟล์มาวาง หรือ")} <u>{t("เลือกไฟล์")}</u></>}</b>
         </span>
       </label>
       {files.length > 0 && (
@@ -69,12 +71,12 @@ function FileControl({ field, form, id, star }: { field: RegFieldSpec; form: Reg
                 {x.name}
                 <small>{((x.size || 0) / 1024).toFixed(0)} KB</small>
               </span>
-              <button type="button" aria-label={`ลบ ${x.name}`} onClick={() => form.removeFile(field.k, i)}>
-                ลบ
+              <button type="button" aria-label={t("Remove {name}", { name: x.name })} onClick={() => form.removeFile(field.k, i)}>
+                {t("Remove")}
               </button>
               {!img && form.scope === "reg" && (
                 <label className="file-expiry">
-                  วันหมดอายุเอกสาร{field.expiryRequired ? <span className="required"> *</span> : " (ถ้ามี)"}
+                  {t("วันหมดอายุเอกสาร")}{field.expiryRequired ? <span className="required"> *</span> : ` ${t("(ถ้ามี)")}`}
                   <input type="date" required={field.expiryRequired} aria-invalid={field.expiryRequired && form.showError(field.k) && !x.expiry ? true : undefined} min={todayIso()} value={x.expiry || ""} onChange={(e) => form.fileExpiry(field.k, i, e.target.value)} />
                 </label>
               )}
@@ -87,6 +89,7 @@ function FileControl({ field, form, id, star }: { field: RegFieldSpec; form: Reg
 }
 
 export default function RegField({ field: f, form }: { field: RegFieldSpec; form: RegFormApi }) {
+  const { t } = useI18n();
   const nativeDate = useRef<HTMLInputElement>(null);
   const d = form.data;
   const scope = form.scope;
@@ -108,35 +111,35 @@ export default function RegField({ field: f, form }: { field: RegFieldSpec; form
   if (f.t === "select") {
     control = (
       <select className="field-control" id={id} disabled={dis} value={val} onChange={(e) => form.set(f.k, e.target.value)} onBlur={() => form.blur(f.k)}>
-        <option value="">{f.ph || "เลือก"}</option>
+        <option value="">{t(f.ph || "Choose")}</option>
         {opts.map((o) => (
           <option key={o} value={o}>
-            {o}
+            {t(o)}
           </option>
         ))}
       </select>
     );
   } else if (f.t === "radio") {
     control = (
-      <div className="reg-radio-row" role="radiogroup" aria-label={f.label}>
+      <div className="reg-radio-row" role="radiogroup" aria-label={t(f.label)}>
         {opts.map((o) => (
           <label className="reg-radio" key={o}>
             <input type="radio" name={id} value={o} checked={val === o} onChange={(e) => form.set(f.k, e.target.value)} />
-            <span>{o}</span>
+            <span>{t(o)}</span>
           </label>
         ))}
       </div>
     );
   } else if (f.t === "textarea") {
-    control = <textarea className="field-control" id={id} rows={4} placeholder={f.ph || ""} value={val} {...textEvents} />;
+    control = <textarea className="field-control" id={id} rows={4} placeholder={f.ph ? t(f.ph) : ""} value={val} {...textEvents} />;
   } else if (f.t === "date") {
     control = (
       <div className="reg-date">
-        <input className="field-control" id={id} type="text" inputMode="numeric" value={val} placeholder={f.ph || ""} autoComplete="off" {...textEvents} />
+        <input className="field-control" id={id} type="text" inputMode="numeric" value={val} placeholder={f.ph ? t(f.ph) : ""} autoComplete="off" {...textEvents} />
         <button
           type="button"
           className="reg-date-button"
-          aria-label="เลือกวันที่"
+          aria-label={t("เลือกวันที่")}
           onClick={() => {
             const native = nativeDate.current;
             if (native?.showPicker) native.showPicker();
@@ -155,9 +158,9 @@ export default function RegField({ field: f, form }: { field: RegFieldSpec; form
       <label className="reg-check">
         <input type="checkbox" id={id} checked={Boolean(val)} onChange={(e) => form.check(f.k, e.target.checked)} />
         <span>
-          {f.label}
+          {t(f.label)}
           {starEl}
-          {f.note && <small className="reg-check-note">{f.note}</small>}
+          {f.note && <small className="reg-check-note">{t(f.note)}</small>}
         </span>
       </label>
     );
@@ -169,7 +172,7 @@ export default function RegField({ field: f, form }: { field: RegFieldSpec; form
         type="text"
         inputMode={(f.mode || "text") as "text"}
         value={val}
-        placeholder={f.ph || ""}
+        placeholder={f.ph ? t(f.ph) : ""}
         autoComplete="off"
         disabled={dis}
         readOnly={ro}
@@ -182,7 +185,7 @@ export default function RegField({ field: f, form }: { field: RegFieldSpec; form
     <div className={`form-field reg-field reg-s${span} ${err ? "has-error" : ""}`} data-reg-field={`${scope}|${f.k}`}>
       {f.t !== "checkbox" && f.t !== "file" && (
         <label htmlFor={id}>
-          {f.label}
+          {t(f.label)}
           {starEl}
         </label>
       )}

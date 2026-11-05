@@ -1,11 +1,14 @@
 import { COMPANY } from "./data";
 import { pushDocument, trackFile } from "./docs";
+import { getLang, translate } from "./i18n";
 import type { Db, FileMeta } from "./types";
+
+/** Translates validation messages at the point they are produced (they are plain strings, not JSX). */
+const tr = (text: string, vars?: Record<string, string | number>) => translate(text, getLang(), vars);
 
 // Registration form data is dynamic (keys come from the field specs), so it stays loosely typed.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type RegData = Record<string, any>;
-export type RegScope = "reg" | "site" | `cat:${number}`;
 
 export interface RegFieldSpec {
   k: string;
@@ -62,18 +65,18 @@ export const REG_PRODUCTS: Record<string, Record<string, string[]>> = {
   "บริการ": { "โลจิสติกส์": ["ขนส่งควบคุมอุณหภูมิ", "คลังสินค้า"], "บริการสนับสนุน": ["ทำความสะอาด", "กำจัดแมลง"] },
 };
 
-export const chkThai = (v: string) => (/^[\u0E00-\u0E7F\s.]+$/.test(v) ? "" : "กรอกเป็นภาษาไทยเท่านั้น");
-export const chkEn = (v: string) => (/^[A-Za-z\s.'-]+$/.test(v) ? "" : "กรอกเป็นภาษาอังกฤษเท่านั้น");
-export const chkPhone = (v: string) => (/^\d{9,15}$/.test(v) ? "" : "ระบุตัวเลข 9-15 หลัก");
-export const chkEmail = (v: string) => (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) ? "" : "รูปแบบอีเมลไม่ถูกต้อง");
+export const chkThai = (v: string) => (/^[\u0E00-\u0E7F\s.]+$/.test(v) ? "" : tr("กรอกเป็นภาษาไทยเท่านั้น"));
+export const chkEn = (v: string) => (/^[A-Za-z\s.'-]+$/.test(v) ? "" : tr("กรอกเป็นภาษาอังกฤษเท่านั้น"));
+export const chkPhone = (v: string) => (/^\d{9,15}$/.test(v) ? "" : tr("ระบุตัวเลข 9-15 หลัก"));
+export const chkEmail = (v: string) => (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) ? "" : tr("รูปแบบอีเมลไม่ถูกต้อง"));
 export const chkCoord = (min: number, max: number, name: string) => (v: string) =>
-  /^-?\d+(\.\d+)?$/.test(v) && Number(v) >= min && Number(v) <= max ? "" : `${name}ต้องเป็นตัวเลขระหว่าง ${min} ถึง ${max}`;
+  /^-?\d+(\.\d+)?$/.test(v) && Number(v) >= min && Number(v) <= max ? "" : tr("{name}ต้องเป็นตัวเลขระหว่าง {min} ถึง {max}", { name: tr(name), min, max });
 
 export function chkRegDate(v: string) {
   const m = /^(\d{2})-(\d{2})-(\d{4})$/.exec(v);
-  if (!m) return "ระบุวันที่ในรูปแบบ DD-MM-YYYY";
+  if (!m) return tr("ระบุวันที่ในรูปแบบ DD-MM-YYYY");
   const date = new Date(Number(m[3]), Number(m[2]) - 1, Number(m[1]));
-  return date.getFullYear() === Number(m[3]) && date.getMonth() === Number(m[2]) - 1 && date.getDate() === Number(m[1]) ? "" : "วันที่ไม่ถูกต้อง";
+  return date.getFullYear() === Number(m[3]) && date.getMonth() === Number(m[2]) - 1 && date.getDate() === Number(m[1]) ? "" : tr("วันที่ไม่ถูกต้อง");
 }
 
 /** yyyy-mm-dd from a native date input -> DD-MM-YYYY, or null when malformed. */
@@ -106,17 +109,17 @@ export const REG_STEP1: RegSection[] = [
     fields: [
       { k: "companyType", label: "ประเภทบริษัท", t: "radio", opts: ["นิติบุคคล", "บุคคลธรรมดา"], req: 1 },
       { k: "country", label: "ประเทศที่จดทะเบียน", t: "select", opts: REG_COUNTRIES, req: 1, ph: "เลือกประเทศ" },
-      { k: "regNo", label: "เลขทะเบียนนิติบุคคล", t: "text", req: 1, max: 20, ph: "ระบุเลขทะเบียน", check: (v) => (/^[A-Za-z0-9]+$/.test(v) ? "" : "ใช้ตัวอักษรหรือตัวเลขเท่านั้น ห้ามมีอักขระพิเศษ") },
+      { k: "regNo", label: "เลขทะเบียนนิติบุคคล", t: "text", req: 1, max: 20, ph: "ระบุเลขทะเบียน", check: (v) => (/^[A-Za-z0-9]+$/.test(v) ? "" : tr("ใช้ตัวอักษรหรือตัวเลขเท่านั้น ห้ามมีอักขระพิเศษ")) },
       { k: "certDate", label: "วันที่ให้การรับรอง", t: "date", req: 1, ph: "DD-MM-YYYY", check: chkRegDate },
       { k: "vatRegistered", label: "การจดทะเบียนภาษีมูลค่าเพิ่ม", t: "radio", opts: ["จดทะเบียนแล้ว", "ยังไม่ได้จดทะเบียน"], req: 1 },
       { k: "companyPrefix", label: "คำนำหน้านิติบุคคล", t: "select", opts: REG_COMPANY_PREFIX, req: 1, ph: "เลือกคำนำหน้า" },
       { k: "companyName", label: "ชื่อนิติบุคคล", t: "text", req: 1, max: 255, span: 2, ph: "ระบุชื่อบริษัท" },
       { k: "businessType", label: "ประเภทธุรกิจผู้ขาย", t: "select", opts: ["ตัวแทนจำหน่าย", "ผู้ผลิต", "สหกรณ์", "เกษตรกร"], req: 1, ph: "เลือกประเภทธุรกิจผู้ขาย" },
-      { k: "employees", label: "จำนวนพนักงาน", t: "text", mode: "numeric", req: 1, ph: "ระบุจำนวนพนักงาน", check: (v) => (/^\d+$/.test(v) && Number(v) > 0 ? "" : "ระบุจำนวนเต็มมากกว่า 0") },
+      { k: "employees", label: "จำนวนพนักงาน", t: "text", mode: "numeric", req: 1, ph: "ระบุจำนวนพนักงาน", check: (v) => (/^\d+$/.test(v) && Number(v) > 0 ? "" : tr("ระบุจำนวนเต็มมากกว่า 0")) },
       { k: "phone", label: "เบอร์โทรศัพท์", t: "text", mode: "tel", req: 1, check: chkPhone, ph: "ระบุเบอร์โทรศัพท์" },
       { k: "email", label: "อีเมล", t: "text", mode: "email", req: 1, check: chkEmail, ph: "ระบุอีเมล" },
       { k: "branchType", label: "สาขา", t: "radio", opts: ["สำนักงานใหญ่", "สาขา"], req: 1, reset: ["branchName"] },
-      { k: "branchCode", label: "รหัสสาขา", t: "text", mode: "numeric", req: 1, ph: "ระบุรหัสสาขา", check: (v) => (/^\d{5}$/.test(v) ? "" : "ระบุตัวเลข 5 หลัก") },
+      { k: "branchCode", label: "รหัสสาขา", t: "text", mode: "numeric", req: 1, ph: "ระบุรหัสสาขา", check: (v) => (/^\d{5}$/.test(v) ? "" : tr("ระบุตัวเลข 5 หลัก")) },
       { k: "branchName", label: "ชื่อสาขา", t: "text", req: 1, max: 255, span: 2, ph: "ระบุชื่อสาขา", dis: (d) => d.branchType !== "สาขา" },
     ],
   },
@@ -131,7 +134,7 @@ export const REG_STEP1: RegSection[] = [
       { k: "a_province", label: "จังหวัด", t: "select", opts: Object.keys(REG_ADDRESS), req: 1, ph: "เลือกจังหวัด", reset: ["a_district", "a_sub"] },
       { k: "a_district", label: "เขต/อำเภอ", t: "select", opts: (d) => Object.keys(REG_ADDRESS[d.a_province] || {}), req: 1, ph: "เลือกเขต/อำเภอ", reset: ["a_sub"], dis: (d) => !d.a_province },
       { k: "a_sub", label: "แขวง/ตำบล", t: "select", opts: (d) => REG_ADDRESS[d.a_province]?.[d.a_district] || [], req: 1, ph: "เลือกแขวง/ตำบล", dis: (d) => !d.a_district },
-      { k: "a_postal", label: "รหัสไปรษณีย์", t: "text", mode: "numeric", req: 1, ph: "ระบุรหัสไปรษณีย์", check: (v) => (/^\d{5}$/.test(v) ? "" : "ระบุรหัสไปรษณีย์ 5 หลัก") },
+      { k: "a_postal", label: "รหัสไปรษณีย์", t: "text", mode: "numeric", req: 1, ph: "ระบุรหัสไปรษณีย์", check: (v) => (/^\d{5}$/.test(v) ? "" : tr("ระบุรหัสไปรษณีย์ 5 หลัก")) },
     ],
   },
   {
@@ -206,7 +209,7 @@ export const SITE_FIELDS: RegFieldSpec[] = [
     mode: "numeric",
     req: 1,
     ph: "ระบุรหัสไปรษณีย์",
-    check: (v, d) => (d.country === "ไทย" ? (/^\d{5}$/.test(v) ? "" : "ระบุรหัสไปรษณีย์ 5 หลัก") : /^\d{3,10}$/.test(v) ? "" : "ระบรหัสไปรษณีย์เป็นตัวเลข"),
+    check: (v, d) => (d.country === "ไทย" ? (/^\d{5}$/.test(v) ? "" : tr("ระบุรหัสไปรษณีย์ 5 หลัก")) : /^\d{3,10}$/.test(v) ? "" : tr("ระบุรหัสไปรษณีย์เป็นตัวเลข")),
   },
   { k: "lat", label: "ละติจูด", t: "text", mode: "decimal", req: 1, ph: "ระบุละติจูด", check: chkCoord(-90, 90, "ละติจูด") },
   { k: "lng", label: "ลองจิจูด", t: "text", mode: "decimal", req: 1, ph: "ระบุลองจิจูด", check: chkCoord(-180, 180, "ลองจิจูด") },
@@ -233,19 +236,19 @@ export function regFieldError(f: RegFieldSpec, d: RegData): string {
   const req = isRegRequired(f, d);
   if (f.t === "file") {
     const files: FileMeta[] = Array.isArray(d[f.k]) ? d[f.k] : [];
-    if (req && !files.length) return "โปรดอัปโหลดไฟล์";
-    if (files.length > 5) return "อัปโหลดได้สูงสุด 5 ไฟล์";
+    if (req && !files.length) return tr("โปรดอัปโหลดไฟล์");
+    if (files.length > 5) return tr("อัปโหลดได้สูงสุด 5 ไฟล์");
     const extensions = f.kind === "img" ? ["png", "jpg", "jpeg"] : ["pdf"];
     if (files.some((file) => !extensions.includes(file.name.split(".").pop()?.toLowerCase() || "")))
-      return `รองรับเฉพาะไฟล์ ${f.kind === "img" ? "PNG หรือ JPG" : "PDF"}`;
-    if (files.some((file) => (file.size || 0) > 5 * 1024 * 1024)) return "ขนาดเกิน 5 MB ต่อไฟล์";
-    if (f.expiryRequired && files.some((file) => !file.expiry?.trim())) return "โปรดระบุวันหมดอายุเอกสารของทุกไฟล์";
+      return tr("รองรับเฉพาะไฟล์ {types}", { types: f.kind === "img" ? tr("PNG หรือ JPG") : "PDF" });
+    if (files.some((file) => (file.size || 0) > 5 * 1024 * 1024)) return tr("ขนาดเกิน 5 MB ต่อไฟล์");
+    if (f.expiryRequired && files.some((file) => !file.expiry?.trim())) return tr("โปรดระบุวันหมดอายุเอกสารของทุกไฟล์");
     return "";
   }
-  if (f.t === "checkbox") return req && !d[f.k] ? "โปรดยืนยันข้อความนี้" : "";
+  if (f.t === "checkbox") return req && !d[f.k] ? tr("โปรดยืนยันข้อความนี้") : "";
   const v = String(d[f.k] ?? "").trim();
-  if (!v) return req ? (["select", "radio"].includes(f.t) ? `โปรดเลือก${f.label}` : `โปรดระบุ${f.label}`) : "";
-  if (f.max && v.length > f.max) return `ไม่เกิน ${f.max} ตัวอักษร`;
+  if (!v) return req ? (["select", "radio"].includes(f.t) ? tr("โปรดเลือก{label}", { label: tr(f.label) }) : tr("โปรดระบุ{label}", { label: tr(f.label) })) : "";
+  if (f.max && v.length > f.max) return tr("ไม่เกิน {max} ตัวอักษร", { max: f.max });
   return f.check ? f.check(v, d) : "";
 }
 
@@ -291,15 +294,15 @@ export function regAddFiles(f: RegFieldSpec, current: FileMeta[], files: File[])
   for (const file of files) {
     const extension = file.name.split(".").pop()!.toLowerCase();
     if (!allowed.includes(extension)) {
-      messages.push(`${file.name}: รองรับเฉพาะไฟล์ ${img ? "PNG หรือ JPG" : "PDF"}`);
+      messages.push(tr("{file}: รองรับเฉพาะไฟล์ {types}", { file: file.name, types: img ? tr("PNG หรือ JPG") : "PDF" }));
       continue;
     }
     if (file.size > 5 * 1024 * 1024) {
-      messages.push(`${file.name}: ขนาดเกิน 5 MB`);
+      messages.push(tr("{file}: ขนาดเกิน 5 MB", { file: file.name }));
       continue;
     }
     if (current.length + added.length >= 5) {
-      messages.push("อัปโหลดได้สูงสุด 5 ไฟล์");
+      messages.push(tr("อัปโหลดได้สูงสุด 5 ไฟล์"));
       break;
     }
     added.push(trackFile(file, file.type || extension));
@@ -344,7 +347,7 @@ export function regAsideSections(r: RegistrationRec) {
   const d = r.data;
   if (r.step === 1) return REG_STEP1.map((s, i) => ({ id: `reg-sec-${i}`, title: s.title, done: s.fields.every((f) => !regFieldError(f, d)) }));
   if (r.step === 2) return [{ id: "reg-sec-0", title: "เอกสารสำคัญ", done: regDocFields(d).every((f) => !regFieldError(f, d)) }];
-  if (r.step === 3) return r.categories.map((c, i) => ({ id: `reg-sec-${i}`, title: `กลุ่มสินค้าที่ ${i + 1}`, done: regCatFields().every((f) => !regFieldError(f, c)) }));
+  if (r.step === 3) return r.categories.map((c, i) => ({ id: `reg-sec-${i}`, title: tr("กลุ่มสินค้าที่ {n}", { n: i + 1 }), done: regCatFields().every((f) => !regFieldError(f, c)) }));
   return [];
 }
 
