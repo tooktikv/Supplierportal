@@ -3,6 +3,7 @@ import type { Db, Lesson, Question, QuestionnaireItem, RequestRec } from "./type
 import { CATEGORIES, policyFields } from "./policy";
 import { buyerRequestOf } from "./sample-request-flow";
 import { initialSrm } from "./srm";
+import { initialQsl } from "./qsl-slm-mock";
 
 export const learningVideoId = "";
 
@@ -102,6 +103,7 @@ export const initial: Db = {
       history: [["Buyer requested sample", `${request.created}T09:00:00`], ...request.history.filter(([action]) => action !== "Draft Created")],
     })),
     srm: initialSrm(),
+    qsl: initialQsl(COMPANY.id),
     registration: { status:"Draft", cocAccepted:false, step:1, data:{}, categories:[{main:"",sub:"",material:"",details:"",files:[]}] },
     profile: {
       company: COMPANY.name, id: COMPANY.id, registration: "US-OR-927461", contact: COMPANY.contact,

@@ -1,5 +1,6 @@
 /** [English, Thai] pairs. Source strings in code may be written in either language; `t()` maps in both directions. */
 import { REGISTRATION_MESSAGES } from "./messages-registration";
+import { QSL_MESSAGES } from "./qsl-messages";
 import { SCOPE3 } from "./srm";
 
 export const MESSAGES: [string, string][] = [
@@ -1037,3 +1038,8 @@ MESSAGES.push(
 );
 
 MESSAGES.push(...REGISTRATION_MESSAGES);
+
+// Existing entries win so earlier screens keep their wording.
+const knownEn = new Set(MESSAGES.map(([en]) => en));
+const knownTh = new Set(MESSAGES.map(([, th]) => th));
+MESSAGES.push(...QSL_MESSAGES.filter(([en, th]) => !knownEn.has(en) && !knownTh.has(th)));

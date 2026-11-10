@@ -7,6 +7,8 @@ import { routes } from "@/lib/routes";
 import { BuyerInterestBadge } from "@/components/BuyerInterest";
 import { registrationDone } from "@/lib/onboarding";
 import { useI18n } from "@/lib/i18n";
+import { NEEDS_ACTION } from "@/lib/qsl";
+import { listRequests } from "@/lib/qsl-service";
 import { usePortal } from "@/lib/store";
 
 const ICONS: Record<string, ReactNode> = {
@@ -14,6 +16,7 @@ const ICONS: Record<string, ReactNode> = {
   samples: (<><path d="m7.5 4.27 9 5.15" /><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z" /><path d="m3.3 7 8.7 5 8.7-5" /><path d="M12 22V12" /></>),
   profile: (<><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z" /><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2" /><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2" /><path d="M10 6h4M10 10h4M10 14h4M10 18h4" /></>),
   srm: (<><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></>),
+  qualification: (<><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z" /><path d="m9 12 2 2 4-4" /></>),
 };
 
 function NavIcon({ name }: { name: string }) {
@@ -27,6 +30,7 @@ function NavIcon({ name }: { name: string }) {
 const NAV = [
   { label: "Supplier Onboarding", icon: "onboarding", href: routes.onboarding, match: "/onboarding" },
   { label: "Sample Request", icon: "samples", href: routes.samples, match: "/sample-requests" },
+  { label: "Qualification", icon: "qualification", href: routes.qualification, match: "/qualification" },
   { label: "Company Profile", icon: "profile", href: routes.profile, match: "/profile" },
   { label: "Supplier Relationship Management", icon: "srm", href: routes.srm, match: "/srm" },
 ];
@@ -38,6 +42,8 @@ function pageName(path: string) {
   if (path.startsWith("/sample-requests/") && path.endsWith("/submit")) return "Provide Sample Information";
   if (path.startsWith("/sample-requests/")) return "Sample Request Details";
   if (path.startsWith("/sample-requests")) return "Sample Request";
+  if (path.startsWith("/qualification/")) return "Qualification Details";
+  if (path.startsWith("/qualification")) return "Qualification";
   if (path.startsWith("/profile")) return "Company Profile";
   if (path.startsWith("/srm")) return "Supplier Relationship Management";
   if (path.startsWith("/help")) return "Help & Support";
@@ -60,6 +66,7 @@ export default function PortalShell({ children }: { children: ReactNode }) {
   }, [registered, pathname, router]);
 
   const actionCount = db.requests.filter((r) => ["Awaiting Submission", "Draft", "Action Required", "Resubmission Required"].includes(r.status)).length;
+  const qualificationCount = listRequests(db).filter((request) => NEEDS_ACTION.includes(request.status)).length;
 
   return (
     <div className="shell">
@@ -91,6 +98,7 @@ export default function PortalShell({ children }: { children: ReactNode }) {
                 <span className="nav-icon"><NavIcon name={item.icon} /></span>
                 {t(item.label)}
                 {item.label === "Sample Request" && actionCount > 0 ? <span className="nav-count">{actionCount}</span> : null}
+                {item.label === "Qualification" && qualificationCount > 0 ? <span className="nav-count">{qualificationCount}</span> : null}
               </>
             );
             return locked ? (

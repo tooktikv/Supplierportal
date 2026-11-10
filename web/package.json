@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "build:offline": "STATIC_EXPORT=1 next build && node scripts/make-offline.mjs"
   },
   "dependencies": {
     "next": "16.4.3",

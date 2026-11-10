@@ -4,8 +4,9 @@ import { policyFields } from "./policy";
 import type { Db } from "./types";
 import { buyerRequestOf } from "./sample-request-flow";
 import { migrateSrmRecords, normalizeScope3 } from "./srm";
+import { migrateQsl } from "./qsl-slm-mock";
 
-export const DB_KEY = "northstar-supplier-portal-v1";
+const DB_KEY = "northstar-supplier-portal-v1";
 
 /** Same migrations as the original mock-up so older saved data keeps working. */
 export function loadDb(): Db {
@@ -77,6 +78,7 @@ export function loadDb(): Db {
     parsed.requests = parsed.requests.map(policyFields);
     parsed.srm = parsed.srm || clone(initial.srm);
     migrateSrmRecords(parsed.srm, initial.srm);
+    parsed.qsl = migrateQsl(parsed.qsl, parsed.profile.id || initial.profile.id);
     for (const record of parsed.srm.ghg) for (const entry of record.cfo || []) entry.scope3Category = normalizeScope3(entry.scope3Category);
     for (const seeded of initial.requests) {
       if (!parsed.requests.some((request: Db["requests"][number]) => request.id === seeded.id)) parsed.requests.unshift(clone(seeded));

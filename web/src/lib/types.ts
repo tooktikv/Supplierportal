@@ -98,4 +98,5 @@ export interface Db {
   };
   documents: DocRecord[];
   srm: import("./srm").SrmState;
+  qsl: import("./qsl").QslState;
 }

@@ -8,7 +8,7 @@ export const CATEGORIES: Record<string, { sampleRequired: boolean; approvalRequi
 };
 
 export const needsSample = (category: string) => CATEGORIES[category]?.sampleRequired === true;
-export const requiresApproval = (category: string) =>
+const requiresApproval = (category: string) =>
   CATEGORIES[category]?.sampleRequired === true && CATEGORIES[category]?.approvalRequired === true;
 
 export function gateOf(r: RequestRec): string {

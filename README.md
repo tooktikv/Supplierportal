@@ -24,6 +24,7 @@ npm run dev      # http://localhost:3000
 - Manufacturing sites: "＋ เพิ่มข้อมูลโรงงาน" opens a modal (ชื่อโรงงาน, ประเทศ, ที่อยู่, จังหวัด/เขต/แขวง, รหัสไปรษณีย์, ละติจูด/ลองจิจูด, ค้นหาสถานที่ + แผนที่) with validation; Save adds a row, Back/×/Esc closes without saving. The map is only an embed driven by the coordinates or search text; there is no real geocoding.
 - Local profile editing, contact registration, document metadata upload/history, and structured supplier questionnaire responses
 - Responsive navigation and layouts
+- Qualification & Skill Rate Card (`/qualification`): Buyer-driven requests from SLM; per-skill self-rating plus rate lines (level, headcount, average years, rate) and commercial terms; evidence linked to documents in Company Profile; read-only snapshot of the Shared Supplier Profile; submit, additional-information replies and revisions; status, released result (outcome, tier, verified ratings) and history. Self-rating and verified rating are stored apart, and a submitted version is never overwritten.
 
 ## Mock behavior and assumptions
 
@@ -48,6 +49,8 @@ npm run dev      # http://localhost:3000
 - The attached supplier-portal UI reference was used to align workflow coverage (supplier registration and owner/contact details, manufacturing locations, e-learning, questionnaires, documents, product categories, and risk results). The prototype retains its existing visual design and uses original fictional data rather than copying the reference screen contents.
 
 ## Backend integration and decisions still needed
+
+Qualification: `lib/qsl-service.ts` holds the supplier-side operations (ownership, role and editability checks, audit log) and `lib/qsl-slm-mock.ts` is a clearly separated mock of SLM (seed requests, rating scale, simulated review and result release, driven by the temporary demo tools). Replace the mock with SLM API calls and enforce the same checks on the server. Rules still to confirm with the Business Owner (configurable in `QSL_RULES` in `lib/qsl.ts`): whether a Supplier User may submit, whether a late submission is blocked or only warned, whether acknowledging a request is mandatory, whether a supplier may withdraw, the rating scale and level definitions, tier names and assignment rules, which verified ratings are visible to suppliers, the rate cap and currencies, and the document types accepted as evidence.
 
 No authentication, authorization service, server-side persistence, real file storage, evaluator workflow, physical receipt confirmation, or supplier qualification service is connected. A production version must enforce supplier-company ownership and access controls on the server.
 

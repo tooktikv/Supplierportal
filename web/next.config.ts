@@ -11,7 +11,12 @@ const nextConfig: NextConfig = {
   outputFileTracingRoot: path.resolve(process.cwd()),
   // Cache Components / PPR cannot be combined with output: "export".
   ...(staticExport
-    ? { output: "export", trailingSlash: true, distDir: ".next-export" }
+    ? {
+        output: "export",
+        trailingSlash: true,
+        distDir: ".next-export",
+        turbopack: { resolveAlias: { "next/navigation": "./src/lib/offline-navigation.ts" } },
+      }
     : {
         cacheComponents: true,
         partialPrefetching: true,

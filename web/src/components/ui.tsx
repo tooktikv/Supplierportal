@@ -3,10 +3,10 @@
 import type { ReactNode } from "react";
 import { useI18n } from "@/lib/i18n";
 
-const GREEN = ["Approved", "Completed", "Verified", "Current", "Satisfied", "Buyer interested", "Low"];
-const AMBER = ["Awaiting Submission", "Action Required", "Awaiting Sample", "Expiring Soon", "Pending", "Required", "Medium"];
-const BLUE = ["Under Review", "Submitted"];
-const RED = ["Rejected", "Failed", "High"];
+const GREEN = ["Approved", "Completed", "Verified", "Current", "Satisfied", "Buyer interested", "Low", "Qualified", "Result Released"];
+const AMBER = ["Awaiting Submission", "Action Required", "Awaiting Sample", "Expiring Soon", "Pending", "Required", "Medium", "Requested", "Additional Information Required", "Conditional"];
+const BLUE = ["Under Review", "Submitted", "Assessment In Progress", "Pending Central Verification", "Pending Qualification Approval"];
+const RED = ["Rejected", "Failed", "High", "Not Qualified", "Suspended"];
 
 /** Same colour rules as the mock-up's badge(). */
 export function Badge({ status }: { status: string }) {

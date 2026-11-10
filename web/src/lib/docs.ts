@@ -12,10 +12,11 @@ const dateFormats = {
 export const fmtDate = (value?: string) =>
   value ? dateFormats[getLang()].format(new Date(value.length === 10 ? `${value}T12:00:00` : value)) : "—";
 
-export const DOC_SOURCES: Record<string, string> = {
+const DOC_SOURCES: Record<string, string> = {
   Registration: "Supplier registration",
   "Pre-Screening": "Pre-screening",
   "Sample Request": "Sample request",
+  Qualification: "Qualification request",
   Manual: "Manual upload",
 };
 export const docSource = (doc: DocRecord) => DOC_SOURCES[doc.group] || doc.group || "—";
@@ -64,7 +65,7 @@ export function docVersions(doc: DocRecord): DocVersion[] {
 
 export const latestUpload = (doc: DocRecord) => docVersions(doc).at(-1)?.date || doc.issue || "";
 
-export function expiryState(doc: DocRecord): "" | "Expired" | "Expiring Soon" {
+function expiryState(doc: DocRecord): "" | "Expired" | "Expiring Soon" {
   if (!doc.expiry || doc.expiry === "—") return "";
   const days = (new Date(`${doc.expiry}T23:59:59`).getTime() - Date.now()) / 864e5;
   return days < 0 ? "Expired" : days <= 30 ? "Expiring Soon" : "";

@@ -28,7 +28,7 @@ export function Section({ num, title, hint, extra, children }: { num?: number; t
   );
 }
 
-function Field({ label, name, span = 2, required, error, hint, children }: { label: ReactNode; name: string; span?: Span; required?: boolean; error?: string; hint?: string; children: ReactNode }) {
+export function Field({ label, name, span = 2, required, error, hint, children }: { label: ReactNode; name: string; span?: Span; required?: boolean; error?: string; hint?: string; children: ReactNode }) {
   const { t } = useI18n();
   return (
     <div className={`form-field reg-field reg-s${span} ${error ? "has-error" : ""}`} data-field={name}>

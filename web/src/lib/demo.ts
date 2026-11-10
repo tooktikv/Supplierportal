@@ -6,8 +6,31 @@ import type { SampleSubmission } from "./sample-request-flow";
 import { addTwoYears, HR_STANDARDS, PROJECT_TYPES, SCOPE3_CATEGORIES, SOURCING_OWNERS, type CfoEntry, type CfpEntry, type GhgRecord, type GovRecord, type HrRecord, type SrmProject } from "./srm";
 import { TLS_QUESTIONS } from "./tls-assessment";
 import type { Db, FileMeta } from "./types";
+import { emptyLine, emptySkill, type QslRequest, type QslResponse } from "./qsl";
 
 export const DEMO_TOOLS = true;
+
+/** Mutates a rate card response so every rate-card field passes validation; evidence is left for the user to attach. */
+export function fillDemoRateCard(request: QslRequest, response: QslResponse) {
+  const year = new Date().getFullYear();
+  Object.assign(response, {
+    currency: request.currencies[0], rateBasis: request.rateBases.includes("Daily") ? "Daily" : request.rateBases[0],
+    effectiveFrom: `${year}-01-01`, validUntil: `${year + 1}-12-31`, leadTimeDays: "14", paymentTermsDays: "45", overtimeWeekday: "1.5", overtimeHoliday: "3", escalationPct: "3",
+  });
+  let optionalKept = false;
+  for (const criterion of request.criteria) {
+    const keep = criterion.mandatory || !optionalKept;
+    if (!criterion.mandatory && keep) optionalKept = true;
+    const skill = (response.skills[criterion.id] ??= emptySkill());
+    if (!keep) {
+      Object.assign(skill, { offered: "No", selfRating: "", lines: [] });
+      continue;
+    }
+    skill.offered = "Yes";
+    skill.selfRating = "3";
+    skill.lines = [[2, 6, 3, 1400], [3, 4, 6, 1900], [4, 2, 10, 2600]].map(([level, headcount, years, rate]) => ({ ...emptyLine(), level: String(level), headcount: String(headcount), avgYears: String(years), rate: String(rate) }));
+  }
+}
 
 const file = (name: string, type = "application/pdf", expiry = "2027-12-31"): FileMeta => ({ name, size: 240000, type, ...(type === "application/pdf" ? { expiry } : {}) });
 

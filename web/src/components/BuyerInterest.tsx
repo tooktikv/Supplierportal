@@ -6,7 +6,7 @@ import { useI18n } from "@/lib/i18n";
 import { buyerInterested } from "@/lib/onboarding";
 import { usePortal } from "@/lib/store";
 
-export const BUYER_INTEREST_STATUS = "Buyer interested";
+const BUYER_INTEREST_STATUS = "Buyer interested";
 
 /** Compact badge for places that are always on screen (sidebar, profile). */
 export function BuyerInterestBadge() {

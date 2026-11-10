@@ -1,7 +1,7 @@
 import type { FileMeta } from "./types";
 
-export type SrmSelectType = "" | "Innovation" | "Sustainability";
-export type SrmProgress = "" | "Not Start" | "In progress" | "Implement";
+type SrmSelectType = "" | "Innovation" | "Sustainability";
+type SrmProgress = "" | "Not Start" | "In progress" | "Implement";
 
 export interface SrmProject {
   id: string;
@@ -53,7 +53,7 @@ export interface CfpEntry {
 }
 
 /** Every SRM list item shares these fields; edits flip it back to Draft until it is submitted again. */
-export interface SrmRecordMeta {
+interface SrmRecordMeta {
   id: string;
   status: "Draft" | "Submitted";
   updated: string;
@@ -117,7 +117,7 @@ export const SCOPE3_CATEGORIES = SCOPE3.map(([en], index) => `${index + 1}. ${en
 /** Maps a saved category (matched by its leading number) to the current option text. */
 export const normalizeScope3 = (value: string) => SCOPE3_CATEGORIES[Number(/^(\d+)\./.exec(value || "")?.[1]) - 1] || "";
 
-export const newId = (prefix: string) => `${prefix}-${Math.random().toString(36).slice(2, 8)}`;
+const newId = (prefix: string) => `${prefix}-${Math.random().toString(36).slice(2, 8)}`;
 
 export const emptyProject = (): SrmProject => ({
   id: newId("prj"), status: "Draft", selectType: "", name: "", projectType: "", objective: "", owner: "", benefit: "", indicator: "",
@@ -213,7 +213,7 @@ export function projectErrors(p: SrmProject): Errors {
   return e;
 }
 
-export function cfoErrors(entry: CfoEntry): Errors {
+function cfoErrors(entry: CfoEntry): Errors {
   const e: Errors = {};
   text(e, "certNo", entry.certNo, 255);
   if (!entry.standard) e.standard = "Select a standard.";
@@ -225,7 +225,7 @@ export function cfoErrors(entry: CfoEntry): Errors {
   return e;
 }
 
-export function cfpErrors(entry: CfpEntry): Errors {
+function cfpErrors(entry: CfpEntry): Errors {
   const e: Errors = {};
   text(e, "certNo", entry.certNo, 255);
   if (!entry.standard) e.standard = "Select a standard.";
@@ -238,7 +238,7 @@ export function cfpErrors(entry: CfpEntry): Errors {
   return e;
 }
 
-export function hrErrors(entry: Pick<HrRecord, "standard" | "other" | "expiry" | "files">): Errors {
+function hrErrors(entry: Pick<HrRecord, "standard" | "other" | "expiry" | "files">): Errors {
   const e: Errors = {};
   if (!entry.standard) e.standard = "Select a standard.";
   if (entry.standard === "อื่น ๆ") text(e, "other", entry.other, 255);

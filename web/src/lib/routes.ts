@@ -7,5 +7,7 @@ export const routes = {
   submitSample: (id: string) => `/sample-requests/${id}/submit`,
   profile: "/profile",
   srm: "/srm",
+  qualification: "/qualification",
+  qualificationDetail: (id: string) => `/qualification/${id}`,
   help: "/help",
 } as const;

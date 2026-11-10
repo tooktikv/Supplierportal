@@ -103,7 +103,7 @@ export function riskAssessmentState(db: Db): "pending" | "required" | "not-requi
 }
 
 /** True once the topic assessment is submitted, or when no area is rated High. */
-export const riskAssessmentDone = (db: Db) => riskAssessmentState(db) === "not-required" || taskCount(db, "sustainability-risk") >= 1;
+const riskAssessmentDone = (db: Db) => riskAssessmentState(db) === "not-required" || taskCount(db, "sustainability-risk") >= 1;
 
 export function riskAssessmentMessage(db: Db) {
   return riskAssessmentState(db) === "pending"

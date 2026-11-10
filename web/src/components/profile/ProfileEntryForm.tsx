@@ -5,7 +5,7 @@ import { useEffect, useRef } from "react";
 import DemoFill from "@/components/DemoFill";
 import { useI18n } from "@/lib/i18n";
 
-export interface EntryField {
+interface EntryField {
   name: string;
   label: string;
   value?: string;
